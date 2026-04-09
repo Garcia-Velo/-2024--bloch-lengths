@@ -1,4 +1,4 @@
-# [2024-] Moments Optimization
+# [2024-] Moments optimization
 
 This project aims to find the quantum states with maximum and minimum entanglement, given the set of second-order moments or Bloch lengths.
 The code is structured to work with systems of any number of parties and local dimension.
