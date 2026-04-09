@@ -3,6 +3,8 @@
 ## Project structure
 
 entanglement-optimization/
+
+```txt
 ├── .venv/
 ├── src/
 │   ├── moments/
@@ -21,6 +23,7 @@ entanglement-optimization/
 ├── pyproject.toml
 ├── README.md
 ├── requirements.txt
+```
 
 - .gitignore: Folders and files that git should ignore for commiting and pushing.
 - pyproject.toml: Configuration file for the local instalation of the package moments.
