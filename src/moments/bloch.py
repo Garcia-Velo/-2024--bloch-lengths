@@ -1,0 +1,343 @@
+#------------------------------
+# Importations
+#------------------------------
+
+# Numerical and scientific python programming
+import numpy as np
+
+# Auxiliary python functions
+from itertools import product, combinations, chain
+from typing import Sequence, Tuple, Dict
+
+#------------------------------
+# Definitions
+#------------------------------
+
+def compute_pauli_basis() -> np.ndarray:
+    """
+    Initialize the Pauli basis of a one-qubit system. This includes the identity matrix as the first element of the basis.
+
+    Returns
+    -------
+    ndarray
+        Array of shape (4, 2, 2), where the indices 0, 1, 2 and 3 correspond to the I, X, Y and Z matrices respectively.
+    """
+    # Definition of the identity and Paui matrices
+    sigma_0 = np.identity(2, dtype = complex)
+    sigma_1 = np.array([[0, 1], [1, 0]], dtype = complex)
+    sigma_2 = 1j * np.array([[0, -1], [1, 0]], dtype = complex)
+    sigma_3 = np.array([[1, 0], [0, -1]], dtype = complex)
+
+    # Return as a numpy asrray for easier handling
+    return np.array([sigma_0, sigma_1, sigma_2, sigma_3])
+
+#------------------------------
+# Main functions
+#------------------------------
+
+def compute_tensor_basis(local_bases: Sequence[np.ndarray]) -> np.ndarray:
+    """
+    Construct the tensor-product operator basis for a composite quantum system.
+    
+    Parameters
+    ----------
+    local_bases : sequence of ndarray
+        List of local operator bases. Each element must be an array of shape (k_n, d_n, d_n), where:
+        - k_n is the number of basis operators for subsystem n,
+        - d_n is the local Hilbert space dimension.
+    
+    Returns
+    -------
+    ndarray
+        Array of shape (k, d, d), where:
+        - k = product of all k_n,
+        - D = product of all d_n.
+        Each entry is a tensor-product basis operator.
+    
+    Raises
+    ------
+    ValueError
+        If input shapes are inconsistent.
+    """
+    # Validate that local_bases is a non-empty sequence
+    if not isinstance(local_bases, Sequence) or len(local_bases) == 0:
+        raise ValueError("'local_bases' must be a non-empty sequence.")
+    
+    # Initialize lists to store local dimensions and basis sizes
+    dims = []
+    sizes = []
+
+    # Extract dimensions and sizes from each local basis
+    for B in local_bases:
+        # Verify each basis is a 3D array
+        if not isinstance(B, np.ndarray) or B.ndim != 3:
+            raise ValueError("Each local basis must be an array of shape (k_n, d_n, d_n).")
+        k, d1, d2 = B.shape
+        # Verify matrices are square
+        if d1 != d2:
+            raise ValueError("Local basis matrices must be square.")
+        # Store the Hilbert space dimension and number of basis operators
+        dims.append(d1)
+        sizes.append(k)
+    
+    # Compute total Hilbert space dimension as product of local dimensions
+    D = int(np.prod(dims))
+    # Compute total number of basis operators as product of local sizes
+    K = int(np.prod(sizes))
+
+    # Allocate array to store all tensor-product basis operators
+    basis = np.empty((K, D, D), dtype=complex)
+
+    # Generate all combinations of basis operator indices across subsystems
+    for idx, multi_idx in enumerate(product(*[range(k) for k in sizes])):
+        # Start with the first local basis operator from subsystem 0
+        op = local_bases[0][multi_idx[0]]
+        # Iteratively tensor-product with operators from remaining subsystems
+        for n in range(1, len(local_bases)):
+            op = np.kron(op, local_bases[n][multi_idx[n]])
+        # Store the resulting tensor-product operator
+        basis[idx] = op
+    
+    return basis
+
+def compute_subset_index_map(local_basis_sizes: Sequence[int]) -> Dict[Tuple[int, ...], np.ndarray]:
+    """
+    Compute index mappings for all subsystem subsets in a tensor-product basis.
+
+    Parameters
+    ----------
+    local_basis_sizes : sequence of int
+        Number of basis elements for each subsystem (e.g., 4 for qubits, d_n^2 for qudits with Gell-Mann basis).
+    
+    Returns
+    -------
+    dict
+        Dictionary mapping subsets (tuples of subsystem indices starting at 0)
+        to arrays of indices in the full tensor basis.
+    
+    Raises
+    ------
+    ValueError
+        If inputs are invalid.
+    
+    Notes
+    -----
+    The identity element (index 0) is excluded for each subsystem.
+    """
+    # Validate that all local basis sizes are positive integers
+    if not all(isinstance(k, int) and k > 0 for k in local_basis_sizes):
+        raise ValueError("All local basis sizes must be positive integers.")
+    
+    # Get the number of subsystems
+    N = len(local_basis_sizes)
+
+    # Initialize dictionary to store subset-to-indices mappings
+    subset_index_map = {}
+    
+    # Compute stride values for converting multi-indices to flat indices in tensor product basis
+    powers = np.cumprod([1] + list(local_basis_sizes[::-1]))[:-1][::-1]
+    
+    # Generate all non-empty subsets of subsystems (1-indexed for compatibility)
+    subsystems = range(1, N + 1)
+    subsets = chain.from_iterable(
+        combinations(subsystems, r) for r in range(1, N + 1)
+    )
+    
+    # Process each subset of subsystems
+    for subset in subsets:
+        subset = tuple(subset)
+        # Convert subsystem indices from 1-indexed to 0-indexed
+        subset_shift = tuple(i - 1 for i in subset)
+        # Get the basis sizes for this particular subset
+        sizes = [local_basis_sizes[i] for i in subset_shift]
+        
+        # Create multi-dimensional grids for all combinations of basis indices (excluding identity at index 0)
+        grids = np.meshgrid(*[np.arange(1, k) for k in sizes], indexing='ij')
+        # Stack grids and reshape to 2D array where each row is a multi-index
+        grid = np.stack(grids, axis=-1).reshape(-1, len(subset))
+
+        # Get the stride values corresponding to this subset
+        weights = powers[list(subset_shift)]
+        # Compute flat indices by matrix-vector multiplication (dot product with strides)
+        indices = grid @ weights
+
+        # Store the computed indices for this subset
+        subset_index_map[subset] = indices.astype(int)
+    
+    return subset_index_map
+
+def compute_bloch_vector(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], rho: np.ndarray) -> Dict[Tuple[int, ...], np.ndarray]:
+    """
+    Compute the generalized Bloch vector coefficients of a density matrix.
+
+    Parameters
+    ----------
+    tensor_basis : ndarray
+        Array of shape (k, d, d) containing the operator basis.
+    subset_index_map : dict
+        Mapping from subsystem subsets to basis indices.
+    rho : ndarray
+        Density matrix of shape (d, d).
+    
+    Returns
+    -------
+    dict
+        Dictionary mapping each subset to its Bloch vector components.
+    
+    Raises
+    ------
+    ValueError
+        If dimensions are inconsistent.
+    """
+    # Dimension validation and extraction
+    if tensor_basis.ndim != 3:
+        raise ValueError("'tensor_basis' must have shape (k, d, d).")
+    
+    k, d1, d2 = tensor_basis.shape
+
+    if rho.shape != (d1, d2):
+        raise ValueError("Shape mismatch between 'rho' and 'tensor_basis'.")
+    
+    # Compute Bloch coefficients
+    coeffs = np.einsum('aij,ji->a', tensor_basis, rho, optimize=True)
+
+    # Arrange Bloch coefficiens into local Bloch vectors
+    return {subset: coeffs[indices].real
+            for subset, indices in subset_index_map.items()}
+
+def compute_dm_from_bloch(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
+                  bloch_coeffs: Dict[Tuple[int, ...], np.ndarray], identity_index: int = 0) -> np.ndarray:
+    """
+    Reconstruct a density matrix from generalized Bloch coefficients.
+
+    Parameters
+    ----------
+    tensor_basis : ndarray
+        Operator basis of shape (k, d, d).
+    subset_index_map : dict
+        Mapping from subsets to basis indices.
+    bloch_coeffs : dict
+        Dictionary of Bloch vectors for each subset.
+    identity_index : int, optional
+        Index of the identity operator in the basis (default is 0).
+    
+    Returns
+    -------
+    ndarray
+        Density matrix of shape (d, d).
+    
+    Raises
+    ------
+    ValueError
+        If inputs are inconsistent.
+    
+    Notes
+    -----
+    Assumes the operator basis is orthonormal under the Hilbert-Schmidt inner product: Tr(B_i^† B_j) = δ_ij.
+    The density matrix is reconstructed as: rho = sum_i c_i B_i, with c_identity fixed by normalization Tr(rho) = 1.
+    """
+    # Dimension validation and extraction
+    if tensor_basis.ndim != 3:
+        raise ValueError("'tensor_basis' must have shape (k, d, d).")
+    
+    k, d, _ = tensor_basis.shape
+
+    # Initialize density matrix
+    rho_coeffs = np.zeros(k, dtype=float)
+
+    # Arrange local Bloch vectors into the global Bloch vector
+    for subset, indices in subset_index_map.items():
+        if subset not in bloch_coeffs:
+            raise ValueError(f"Missing Bloch coefficients for subset {subset}.")
+        rho_coeffs[indices] = bloch_coeffs[subset]
+    
+    # Add identity term
+    rho_coeffs[identity_index] = 1.0
+    
+    # Compute density matrix from Bloch coefficients
+    rho = np.einsum('a,aij->ij', rho_coeffs, tensor_basis, optimize=True)
+
+    # Normalization
+    return (1/d) * rho
+
+def compute_bloch_norms_from_dm(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
+                        rho: np.ndarray) -> Dict[Tuple[int, ...], float]:
+    """
+    Compute the norms of Bloch vector components for all subsystem subsets.
+
+    Parameters
+    ----------
+    tensor_basis : ndarray
+        Operator basis of shape (k, d, d).
+    subset_index_map : dict
+        Mapping from subsets to basis indices.
+    rho : ndarray
+        Density matrix of shape (d, d).
+    
+    Returns
+    -------
+    dict
+        Dictionary mapping each subset to the Euclidean norm of its Bloch vector.
+    
+    Raises
+    ------
+    ValueError
+        If dimensions are inconsistent.
+    """
+    # Dimension validation and extraction
+    if tensor_basis.ndim != 3:
+        raise ValueError("'tensor_basis' must have shape (k, d, d).")
+    
+    k, d1, d2 = tensor_basis.shape
+
+    if rho.shape != (d1, d2):
+        raise ValueError("Shape mismatch between 'rho' and 'tensor_basis'.")
+    
+    # Compute Bloch coefficients
+    coeffs = np.einsum('aij,ji->a', tensor_basis, rho, optimize=True).real
+
+    # Arrange Bloch coefficiens into local Bloch vectors and compute norms
+    return {subset: np.linalg.norm(coeffs[indices])
+            for subset, indices in subset_index_map.items()}
+
+def compute_bloch_norms_from_vector(bloch_coeffs: Dict[Tuple[int, ...], np.ndarray], tol: float = 0.0) -> Dict[Tuple[int, ...], float]:
+    """
+    Compute the Euclidean norms of Bloch vectors for all subsystem subsets.
+
+    Parameters
+    ----------
+    bloch_coeffs : dict
+        Dictionary mapping subsets (tuples) to Bloch vectors (ndarrays).
+    tol : float, optional
+        Threshold below which norms are set to zero (default is 0.0).
+    
+    Returns
+    -------
+    dict
+        Dictionary mapping each subset to the norm of its Bloch vector.
+    
+    Raises
+    ------
+    TypeError
+        If input is not a dictionary or values are not numpy arrays.
+    ValueError
+        If any Bloch vector is not 1D.
+    """
+    # Validate datatypes
+    if not isinstance(bloch_coeffs, dict):
+        raise TypeError("'bloch_coeffs' must be a dictionary.")
+    
+    result = {}
+    for subset, vec in bloch_coeffs.items():
+        if not isinstance(vec, np.ndarray):
+            raise TypeError(f"Bloch vector for subset {subset} must be a numpy array.")
+        if vec.ndim != 1:
+            raise ValueError(f"Bloch vector for subset {subset} must be 1D.")
+        
+        # Compute Bloch norms
+        n = np.linalg.norm(vec)
+        if n <= tol:
+            n = 0.0
+        result[subset] = n
+    
+    return result
