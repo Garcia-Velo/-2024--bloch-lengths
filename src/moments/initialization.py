@@ -43,8 +43,8 @@ def compute_param_from_X(X: np.ndarray) -> np.ndarray:
     x = np.empty(2 * vals.size, dtype=float)
     
     # Assign real parts to even indices and imaginary parts to odd indices
-    x[0::2] = vals.real
-    x[1::2] = vals.imag
+    x[0::2] = np.real(vals)
+    x[1::2] = np.imag(vals)
 
     return x
 
@@ -198,9 +198,9 @@ def initial_state_loss_grad(x: np.ndarray, tensor_basis: np.ndarray, subset_inde
     grad[0::2] = grad_vals.real
     grad[1::2] = grad_vals.imag
 
-    return loss, grad
+    return float(loss), grad
 
-def compute_initial_param(d, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float]) -> np.ndarray:
+def compute_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float]) -> np.ndarray:
     """
     Compute initial parameters for the density matrix by optimizing over random initializations.
 
@@ -249,5 +249,8 @@ def compute_initial_param(d, tensor_basis: np.ndarray, subset_index_map: Dict[Tu
             best_res = res
     
     # Extract the optimized parameters from the best result
-    x = res.x
-    return x
+    if best_res is not None:
+        return best_res.x
+    else:
+        raise RuntimeError("Optimization failed for all initializations.")
+        

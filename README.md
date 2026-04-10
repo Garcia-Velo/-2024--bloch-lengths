@@ -53,3 +53,7 @@ This folder is inside "notebooks/" and implements tests to check that auxiliary 
 - bloch.ipynb: Some tests to check that the functions on bloch.py work properly.
 - initialization.ipynb: Some tests to check that the functions on initialization.py work properly.
 - quantum.ipynb: Some tests to check that the functions on quantum.py work properly.
+
+## To-Do
+
+- Fix the optimization algorithm. Notebook "space_exploration.ipynb" now contains the latest version of the optimization algorithm that should find the quantum state with minimum/maximum entanglement for a fixed set of second-order moments. In particular, function "optimize_moment_preserving_entanglement", which contains the main optimizer. Right now, the function is failing the optimization and returning the initial state.
