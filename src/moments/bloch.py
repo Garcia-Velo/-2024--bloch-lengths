@@ -7,7 +7,7 @@ import numpy as np
 
 # Auxiliary python functions
 from itertools import product, combinations, chain
-from typing import Sequence, Tuple, Dict
+from typing import Sequence, Tuple, Dict, Any
 
 #------------------------------
 # Definitions
@@ -261,7 +261,7 @@ def compute_dm_from_bloch(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple
     return (1/d) * rho
 
 def compute_bloch_norms_from_dm(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
-                        rho: np.ndarray) -> Dict[Tuple[int, ...], float]:
+                        rho: np.ndarray) -> Dict[Tuple[int, ...], np.floating[Any]]:
     """
     Compute the norms of Bloch vector components for all subsystem subsets.
 

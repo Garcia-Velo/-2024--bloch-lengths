@@ -212,7 +212,7 @@ def compute_binary_entropy(x: Union[np.ndarray, float], tol: float = 1e-12) -> U
     # Return a float if input was scalar, otherwise return array
     return result.item() if result.ndim == 0 else result
 
-def compute_eof(rho: Optional[np.ndarray] = None, C: Optional[float] = None) -> float:
+def compute_eof(rho: Optional[np.ndarray] = None, C: Optional[float] = None) -> Union[np.ndarray, float]:
     """
     Compute the entanglement of formation for a two-qubit state.
 
