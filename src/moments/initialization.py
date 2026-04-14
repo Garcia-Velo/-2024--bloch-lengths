@@ -266,7 +266,7 @@ def initial_state_loss_grad(x: np.ndarray, tensor_basis: np.ndarray, subset_inde
 
     return loss, grad
 
-def compute_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
+def optmize_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
                           Rt: Dict[Tuple[int, ...], float], cholesky: bool = False) -> np.ndarray:
     """
     Compute initial parameters for the density matrix by optimizing over random initializations.
