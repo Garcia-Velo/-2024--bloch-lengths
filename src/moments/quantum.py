@@ -12,7 +12,7 @@ from typing import Tuple, Dict, Union, Optional
 # State preparation and validation
 # ----------------------------------------
 
-def compute_is_valid_dm(rho: np.ndarray, tol: float = 1e-10, return_info: bool = False) -> Tuple[bool, Dict]:
+def compute_is_valid_dm(rho: np.ndarray, tol: float = 1e-10) -> Tuple[bool, Dict]:
     """
     Check whether a matrix is a valid density matrix.
 
@@ -70,8 +70,6 @@ def compute_is_valid_dm(rho: np.ndarray, tol: float = 1e-10, return_info: bool =
     
     # Return results
     is_valid = trace_ok and hermitian_ok and psd_ok
-    if not return_info:
-        return is_valid
     
     # Diagnostic information
     info = {
