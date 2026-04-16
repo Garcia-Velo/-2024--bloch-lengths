@@ -123,6 +123,12 @@ def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, .
     R0 = compute_bloch_norms_from_vector(r0)
     metric_value = compute_metric(rho)
 
+    moments_distance = {}
+    moments_equal = None
+    for subset in subset_index_map.keys():
+        moments_distance[subset] = float(abs(R0[subset] - Rt[subset]))
+        moments_equal = np.allclose(np.array(list(R0.values())), np.array(list(R0.values())))
+    
     moments_difference = np.mean([R0[subset] - Rt[subset] for subset in subset_index_map.keys()])
 
     return OptimizationResult(
@@ -135,8 +141,9 @@ def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, .
         metric_name=metric,
         metric_initial=metric_value,
         metric_final=metric_value,
-        checks={"moments_difference": moments_difference, "is_valid_dm": True, "note": reason,},
-        optimizer_info={"mode": "trivial", "reason": reason,},)
+        checks={"moments_difference": moments_difference, "moments_equal": moments_equal,
+                "is_valid_dm": True,},
+        optimizer_info={"mode": "trivial", "result_success": True, "result_message": reason,},)
 
 # ----------------------------------------
 # Main optimizer
