@@ -93,7 +93,7 @@ def choose_metric(metric: str) -> Callable:
         raise ValueError("Metric must be 'concurrence' or 'eof'.")
 
 def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], rho: np.ndarray,
-                   Rt: Dict[Tuple[int, ...], float], metric: str, reason: str) -> OptimizationResult:
+                   Rt: Dict[Tuple[int, ...], float], metric: str, result_message: str, result_success: bool = True) -> OptimizationResult:
     """
     Create an OptimizationResult for trivial cases where no optimization is required.
 
@@ -143,7 +143,7 @@ def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, .
         metric_final=metric_value,
         checks={"moments_difference": moments_difference, "moments_equal": moments_equal,
                 "is_valid_dm": True,},
-        optimizer_info={"mode": "trivial", "result_success": True, "result_message": reason,},)
+        optimizer_info={"mode": "trivial", "result_success": result_success, "result_message": result_message,},)
 
 # ----------------------------------------
 # Main optimizer
@@ -216,13 +216,13 @@ def optimize_moment_preserving_entanglement(d: int, tensor_basis: np.ndarray, su
     if SR >= d - 1 - purity_tol:
         return trivial_result(
             tensor_basis, subset_index_map, rho0, Rt, metric,
-            reason="The input state is numerically pure. Entanglement cannot be improved."
+            result_message="The input state is numerically pure. Entanglement cannot be improved."
         )
 
     if SR <= 0 + purity_tol:
         return trivial_result(
             tensor_basis, subset_index_map, np.identity(d, dtype=complex) / d, Rt, metric,
-            reason="The input state is numerically maximally mixed. Entanglement cannot be improved."
+            result_message="The input state is numerically maximally mixed. Entanglement cannot be improved."
         )
     
     # --- 3. Convert to Cholesky parametrization ---
