@@ -31,6 +31,81 @@ def compute_pauli_basis() -> np.ndarray:
     # Return as a numpy asrray for easier handling
     return np.array([sigma_0, sigma_1, sigma_2, sigma_3])
 
+import numpy as np
+
+
+def compute_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
+    """
+    Generate the generalized Gell-Mann basis for a qudit of local dimension d.
+    The basis consists of d^2 Hermitian matrices, including the identity as the first element.
+
+    The matrices satisfy:
+        - Lambda_0 = I_d (identity)
+        - Tr(Lambda_i) = 0 for i > 0 (traceless)
+        - Tr(Lambda_i @ Lambda_j) = d * delta_ij (orthogonal, not normalized)
+        - Lambda_i = Lambda_i^dagger (Hermitian)
+
+    Parameters
+    ----------
+    d : int
+        Local Hilbert space dimension. Must satisfy d >= 2.
+    
+    Returns
+    -------
+    np.ndarray
+        Array of shape (d², d, d) of dtype complex128.
+        Index 0 is always the identity (normalized to I/sqrt(d) if normalized=True).
+        Remaining d²-1 entries are the traceless generators, ordered as:
+            - symmetric off-diagonal (d(d-1)/2 matrices)
+            - antisymmetric off-diagonal (d(d-1)/2 matrices)
+            - diagonal (d-1 matrices)
+    Raises
+    ------
+    ValueError
+        If d < 2.
+    """
+    if d < 2:
+        raise ValueError(f"Dimension must be d >= 2, got {d}.")
+    
+    # Normalization scale
+    if normalize:
+        scale = np.sqrt(d / 2)
+    else:
+        scale = 1
+
+    basis = []
+
+    # Identity
+    basis.append(np.eye(d, dtype=complex))
+
+    # Symmetric off-diagonal
+    for k in range(d):
+        for j in range(k):
+            m = np.zeros((d, d), dtype=complex)
+            m[j, k] = 1.0
+            m[k, j] = 1.0
+            basis.append(scale * m)
+    
+    # --- Antisymmetric off-diagonal: -i|j><k| + i|k><j| for j < k ---
+    for k in range(d):
+        for j in range(k):
+            m = np.zeros((d, d), dtype=complex)
+            m[j, k] = -1j
+            m[k, j] =  1j
+            basis.append(scale * m)
+    
+    # --- Diagonal: sqrt(2/l(l+1)) * (sum_{j<l} |j><j| - l|l><l|) ---
+    for l in range(1, d):
+        m = np.zeros((d, d), dtype=complex)
+        diag_norm = np.sqrt(2.0 / (l * (l + 1)))
+        for j in range(l):
+            m[j, j] = 1.0
+        m[l, l] = -l
+        prefactor = np.sqrt(2.0 / (l * (l + 1)))
+        basis.append(scale * diag_norm * m)
+    
+    return np.array(basis)
+
 #------------------------------
 # Main functions
 #------------------------------
