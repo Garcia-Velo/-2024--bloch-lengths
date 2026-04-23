@@ -4,10 +4,49 @@
 
 # Numerical and scientific python programming
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import minimize, OptimizeResult
 
 # Auxiliary python functions
+from dataclasses import dataclass
 from typing import Tuple, Dict, Union, Any
+
+# Local importations
+from moments.bloch import compute_bloch_vector, compute_bloch_norms_from_vector
+from moments.quantum import compute_is_valid_dm
+
+# ----------------------------------------
+# Definitions
+# ----------------------------------------
+
+@dataclass
+class ParameterResult:
+    """
+    Data class to store the results of the moment-preserving entanglement optimization.
+
+    Attributes
+    ----------
+    param : np.ndarray
+        The optimized parameters.
+    rho : np.ndarray
+        The optimized density matrix.
+    bloch : Dict[Tuple[int, ...], np.ndarray]
+        Final Bloch vectors for each subsystem subset.
+    moments : Dict[Tuple[int, ...], float]
+        Final moment norms for each subsystem subset.
+    loss : float
+        Final value of the loss.
+    checks : Dict[str, Any]
+        Additional checks and information about the optimization.
+    optimizer_info : Dict[str, Any]
+        Information about the optimization process.
+    """
+    param: np.ndarray
+    rho: np.ndarray
+    bloch: Dict[Tuple[int, ...], np.ndarray]
+    moments: Dict[Tuple[int, ...], float]
+    loss: float
+    checks: Dict[str, Any]
+    optimizer_info: Dict[str, Any]
 
 #------------------------------
 # Parametrization of the density matrix
@@ -182,6 +221,78 @@ def compute_dm_from_X(X: np.ndarray) -> np.ndarray:
     return rho
 
 #------------------------------
+# Auxiliary functions for optimization
+#------------------------------
+
+def build_parameter_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float],
+                           optimizer_res: OptimizeResult, cholesky: bool = False, psd_tol: float = 1e-10) -> ParameterResult:
+    """
+    Build the ParameterResult from optimized parameters and optimizer result.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Optimized parameter vector.
+    optimizer_res : OptimizeResult
+        Result from scipy.optimize.minimize.
+    d : int
+        Dimension of the system.
+    tensor_basis : ndarray
+        Tensor-product operator basis, shape (K, D, D).
+    subset_index_map : dict
+        Mapping from subsystem subsets to indices in tensor_basis.
+    Rt : dict
+        Target Bloch vector norms for each subsystem subset.
+    cholesky : bool, default=False
+        If True, uses compact Cholesky parametrization (lower triangular X).
+    psd_tol : float, default=1e-10
+        Tolerance for positive semidefinite check.
+    
+    Returns
+    -------
+    ParameterResult
+        Complete result with all computed quantities.
+    """
+    # Extract final state
+    x = optimizer_res.x
+    X = compute_X_from_param(x, cholesky)
+    rho = compute_dm_from_X(X)
+    r = compute_bloch_vector(tensor_basis, subset_index_map, rho)
+    R = compute_bloch_norms_from_vector(r)
+    
+    # Run checks on the solution
+    moments_distance = {}
+    for subset in subset_index_map.keys():
+        moments_distance[subset] = float(abs(R[subset] - Rt[subset]))
+    
+    is_valid_dm, is_valid_dm_info = compute_is_valid_dm(rho, psd_tol)
+    
+    checks = {
+        "moments_distance": moments_distance,
+        "is_valid_dm": is_valid_dm,
+        "is_valid_dm_info": is_valid_dm_info,
+    }
+
+    # Returns information about optimization
+    optimizer_info = {
+        "mode": "moment_preserving_bloch",
+        "success": bool(optimizer_res.success),
+        "message": str(optimizer_res.message),
+        "nit": int(optimizer_res.nit),
+        "nfev": int(optimizer_res.nfev),
+    }
+
+    return ParameterResult(
+        param=x,
+        rho=rho,
+        bloch=r,
+        moments=R,
+        loss=float(optimizer_res.fun),
+        checks=checks,
+        optimizer_info=optimizer_info,
+    )
+
+#------------------------------
 # Optimization functions
 #------------------------------
 
@@ -266,8 +377,8 @@ def initial_state_loss_grad(x: np.ndarray, tensor_basis: np.ndarray, subset_inde
 
     return loss, grad
 
-def optmize_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
-                          Rt: Dict[Tuple[int, ...], float], cholesky: bool = False) -> np.ndarray:
+def compute_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float],
+                          cholesky: bool = False, psd_tol: float = 1e-10) -> OptimizeResult:
     """
     Compute initial parameters for the density matrix by optimizing over random initializations.
 
@@ -283,48 +394,82 @@ def optmize_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Di
         Target Bloch vector norms for each subsystem subset.
     cholesky : bool, default=False
         If True, uses compact Cholesky parametrization (lower triangular X).
+    psd_tol : float, default=1e-10
+        Tolerance for positive semidefinite check.
+    return_full : bool, default=True
+        If True, return full ParameterResult. If False, return the optimizer result.
     
     Returns
     -------
-    ndarray
-        Optimized real parameter vector x.
+    OptimizeResult
     """
-    # Initialize random number generator
-    rng = np.random.default_rng()
-    
     # Determine number of parameters based on parametrization
     if cholesky:
         n_params = d * (d + 1)  # Number of real parameters for lower triangular
     else:
         n_params = 2 * d * d     # Number of real parameters for full matrix
     
-    # Initialize variables to track the best optimization result
-    best_loss = np.inf
-    best_res = None
-    
-    # Try multiple random initializations to find the best starting point
-    for _ in range(5):
-        
-        # Generate random initial parameter vector
-        x0 = rng.normal(size=n_params)
-        
-        try:
-            # Perform optimization using L-BFGS-B method
-            res = minimize(initial_state_loss_grad, x0,
+    # Generate random initial parameter vector
+    rng = np.random.default_rng()
+    x0 = rng.normal(size=n_params)
+
+    # Perform optimization using L-BFGS-B method
+    res = minimize(initial_state_loss_grad, x0,
                            args=(tensor_basis, subset_index_map, Rt, cholesky),
                            jac=True, method='L-BFGS-B')
+    
+    return res
+
+def compute_initial_param_repeat(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float],
+                                 cholesky: bool = False, psd_tol: float = 1e-10, attempts: int = 5) -> ParameterResult:
+    """
+    Compute initial parameters by trying multiple random initializations and selecting the best result.
+
+    Parameters
+    ----------
+    d : int
+        Dimension of the system.
+    tensor_basis : ndarray
+        Tensor-product operator basis, shape (K, D, D).
+    subset_index_map : dict
+        Mapping from subsystem subsets to indices in tensor_basis.
+    Rt : dict
+        Target Bloch vector norms for each subsystem subset.
+    cholesky : bool, default=False
+        If True, uses compact Cholesky parametrization (lower triangular X).
+    psd_tol : float, default=1e-10
+        Tolerance for positive semidefinite check.
+    attempts : int, default=5
+        Number of random initializations to try.
+    
+    Returns
+    -------
+    ParameterResult
+        The best result among the attempts.
+    """
+    # Initialize variables to track the best optimization result
+    loss_best = np.inf
+    res_best = None
+
+    # Try multiple random initializations to find the best starting point
+    for _ in range(attempts):
+        
+        try:
+            # Perform optimization
+            res = compute_initial_param(d, tensor_basis, subset_index_map, Rt, cholesky, psd_tol)
+        
         except Exception as e:
             # Print error message if minimization fails
             print(f"Minimization failed at point R = {tuple(Rt.values())}: {e}")
             continue
         
         # Update best result if current loss is lower
-        if res.fun < best_loss:
-            best_loss = res.fun
-            best_res = res
+        if res.fun < loss_best:
+            loss_best = res.fun
+            res_best = res
     
-    # Extract the optimized parameters from the best result
-    if best_res is not None:
-        return best_res.x
-    else:
-        raise RuntimeError("Optimization failed for all initializations.")
+    if res_best is None:
+        raise RuntimeError(f"All {attempts} optimization attempts failed at R = {tuple(Rt.values())}.")
+    
+    # Build the full result for the best optimizer result
+    return build_parameter_result(tensor_basis, subset_index_map, Rt, res_best, cholesky, psd_tol)

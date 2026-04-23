@@ -13,7 +13,7 @@ from typing import Tuple, Dict, Callable, Any
 
 # Local importations
 from moments.bloch import compute_bloch_vector, compute_bloch_norms_from_vector
-from moments.initialization import optmize_initial_param, compute_param_from_X, compute_X_from_param, compute_dm_from_X
+from moments.initialization import ParameterResult, compute_initial_param_repeat, compute_param_from_X, compute_X_from_param, compute_dm_from_X
 from moments.quantum import compute_is_valid_dm, compute_concurrence, compute_eof
 
 # ----------------------------------------
@@ -195,19 +195,11 @@ def optimize_moment_preserving_entanglement(d: int, tensor_basis: np.ndarray, su
     # --- 1. Find valid initial state ---
     compute_metric = choose_metric(metric)
     
-    x0 = None
-    rho0 = None
-    initial_state = False
-    while not initial_state:
-        x0 = optmize_initial_param(d, tensor_basis, subset_index_map, Rt)
-        rho0 = compute_dm_from_X(compute_X_from_param(x0))
-        initial_state, _ = compute_is_valid_dm(rho0, psd_tol)
+    param_res: ParameterResult | None = None
+    while param_res is None or not param_res.optimizer_info["success"]:
+        param_res = compute_initial_param_repeat(d, tensor_basis, subset_index_map, Rt)
     
-    if x0 is None or rho0 is None:
-        raise RuntimeError("Failed to compute initial state")
-
-    r0 = compute_bloch_vector(tensor_basis, subset_index_map, rho0)
-    R0 = compute_bloch_norms_from_vector(r0)
+    x0, rho0, r0, R0 = param_res.param, param_res.rho, param_res.bloch, param_res.moments
     metric0 = compute_metric(rho0)
     
     # --- 2. Check trivial cases ---
