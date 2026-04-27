@@ -77,5 +77,5 @@ The code is structured to work with systems of any number of parties and local d
 1. **Enhance the convergence and stability of tha main algoritm**. The main optimzation algorithm can be found at "src/moments/optimization.py". It has been tested in the two-qubit scenario of the $x=y$ and $y=0$ planes. Those experiments can be found at "notebooks/experiments/two_qubits.ipynb" and the results at "notebooks/post/two_qubits.ipynb". As it can be seen, the algorithm does not converge for a percentage of points deppending on the particular experiment. Besides, for points close to the separable region, the algorithm is not finding the propper entanglement. For presenting the results in the paper, it would be nice to have a version that even if does not converge, it at least finds the propper (or close to the correct) entanglement.
 
 2. **Extending the code to 2 qutrits**: For the paper, it will also be necessary to extend the code, to the 2-qutrit case. This implies to things:
-    2.1. **Search for entanglement measures in the 2-qutrit scenario**: Ricardo is doing this right now.
-    2.2. **Parametrize the region of states in the 2-qutrit scenario**: Alfonso is doing this right now.
+    1. **Search for entanglement measures in the 2-qutrit scenario**: Ricardo is doing this right now.
+    2. **Parametrize the region of states in the 2-qutrit scenario**: Alfonso is doing this right now.
