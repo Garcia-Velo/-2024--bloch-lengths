@@ -14,7 +14,7 @@ from typing import Tuple, Dict, Callable, Any
 # Local importations
 from moments.bloch import compute_bloch_vector, compute_bloch_norms_from_vector
 from moments.initialization import ParameterResult, compute_initial_param_repeat, compute_param_from_X, compute_X_from_param, compute_dm_from_X
-from moments.quantum import compute_is_valid_dm, compute_concurrence, compute_eof
+from moments.quantum import compute_is_valid_dm, compute_concurrence, compute_eof, compute_partial_trace_norm, compute_negativity
 
 # ----------------------------------------
 # Definitions
@@ -89,6 +89,10 @@ def choose_metric(metric: str) -> Callable:
         return compute_concurrence
     elif metric in {"eof", "entanglement_of_formation", "entanglement-of-formation"}:
         return compute_eof
+    elif metric in {"trace_norm", "trace norm", "partial_trace_norm", "partial trace norm"}:
+        return compute_partial_trace_norm
+    elif metric == "negativity":
+        return compute_negativity
     else:
         raise ValueError("Metric must be 'concurrence' or 'eof'.")
 
@@ -150,8 +154,8 @@ def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, .
 # ----------------------------------------
 
 def optimize_moment_preserving_entanglement(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
-                                            Rt: Dict[Tuple[int, ...], float], metric: str = "concurrence",
-                                            optimization: str = "minimize", cholesky_opt: bool = False,
+                                            Rt: Dict[Tuple[int, ...], float], optimization: str = "minimize",
+                                            metric: str = "concurrence", cholesky_opt: bool = False,
                                             purity_tol: float = 1e-10, psd_tol: float = 1e-10, jac_tol: float = 1e-12,
                                             local_maxiter: int = 500) -> OptimizationResult:
     """

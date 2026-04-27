@@ -5,8 +5,10 @@
 # Numerical and scientific python programming
 import numpy as np
 
+from scipy.linalg import eigh
+
 # Auxiliary python functions
-from typing import Tuple, Dict, Union, Optional
+from typing import List, Tuple, Dict, Union, Optional
 
 # ----------------------------------------
 # State preparation and validation
@@ -243,3 +245,136 @@ def compute_eof(rho: Optional[np.ndarray] = None, C: Optional[float] = None) -> 
     p = 0.5 + 0.5 * sqrt_term
     
     return compute_binary_entropy(p)
+
+def compute_trace_norm(A: np.ndarray) -> float:
+    """
+    Compute the trace norm of a Hermitian.
+    For a Hermitian matrix A, the trace norm reduces to the sum of absolute eigenvalues.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        A Hermitian (trace-1) matrix of shape (n, n).
+
+    Returns
+    -------
+    float
+        The trace norm of A.
+    """
+    eigenvalues = eigh(A, eigvals_only=True)
+    return np.sum(np.abs(eigenvalues))
+
+def compute_partial_transpose(rho: np.ndarray, dim: List[int], subsystem: int = 1) -> np.ndarray:
+    """
+    Compute the partial transpose of a bipartite density matrix.
+
+    Parameters
+    ----------
+    rho : np.ndarray
+        Density matrix of shape (dA*dB, dA*dB).
+    dim : tuple[int, int] | int
+        Local Hilbert space dimensions (dA, dB).
+    subsystem : int
+        Subsystem to transpose: 0 for A, 1 for B (default).
+
+    Returns
+    -------
+    np.ndarray
+        The partially transposed matrix rho^Gamma.
+    """
+    dA, dB = dim
+    # Reshape into (dA, dB, dA, dB) tensor, then swap indices of target subsystem
+    rho_tensor = rho.reshape(dA, dB, dA, dB)
+    if subsystem == 1:
+        rho_pt = rho_tensor.transpose(0, 3, 2, 1)  # transpose B: swap j <-> l
+    else:
+        rho_pt = rho_tensor.transpose(2, 1, 0, 3)  # transpose A: swap i <-> k
+    return rho_pt.reshape(dA * dB, dA * dB)
+
+def compute_partial_trace_norm(rho: np.ndarray, dim: List[int] | None = None,  subsystem: int = 1) -> float:
+    """
+    Compute the trace norm  of the the partial transpose of a bipartite density matrix.
+
+    Parameters
+    ----------
+    rho : np.ndarray
+        Density matrix of shape (dA*dB, dA*dB).
+    dim : List[int], optional
+        Local Hilbert space dimensions (dA, dB). Required if rho is provided and the subsystems are not equal in dimension.
+        If None and rho is provided, a symmetric bipartition dA = dB = sqrt(n) is assumed.
+    subsystem : int
+        Subsystem to partially transpose: 0 for A, 1 for B (default).
+
+    Returns
+    -------
+    float
+        The trace norm of rho^Gamma.
+    """
+    n = rho.shape[0]
+    if dim is None:
+        dA = dB = int(np.sqrt(n))
+        if dA * dB != n:
+            raise ValueError(
+                "Could not infer a symmetric bipartition from rho. "
+                "Please provide dim=(dA, dB) explicitly."
+            )
+        dim = [dA, dB]
+    elif dim[0] * dim[1] != n:
+        raise ValueError(f"dim={dim} inconsistent with rho shape ({n}, {n}).")
+
+    rho_pt = compute_partial_transpose(rho, dim=dim, subsystem=subsystem)
+    return compute_trace_norm(rho_pt)
+
+def compute_negativity(
+    rho: np.ndarray | None = None,
+    trace_norm_pt: float | None = None,
+    dim: List[int] | None = None,
+    subsystem: int = 1,
+) -> float:
+    """
+    Compute the entanglement negativity of a bipartite quantum state.
+
+    Accepts either the full density matrix or a precomputed trace norm of the partial transpose.
+
+    Parameters
+    ----------
+    rho : np.ndarray, optional
+        Density matrix of shape (dA*dB, dA*dB). Required if trace_norm_pt is not provided.
+    trace_norm_pt : float, optional
+        Precomputed trace norm ||rho^Gamma||_1. If provided, rho and dim are not used.
+    dim : List[int], optional
+        Local Hilbert space dimensions (dA, dB). Required if rho is provided and the subsystems are not equal in dimension.
+        If None and rho is provided, a symmetric bipartition dA = dB = sqrt(n) is assumed.
+    subsystem : int
+        Subsystem to partially transpose: 0 for A, 1 for B (default).
+
+    Returns
+    -------
+    float
+        The entanglement negativity N(rho) >= 0.
+
+    Raises
+    ------
+    ValueError
+        If neither rho nor trace_norm_pt is provided, or if dim is inconsistent with the shape of rho.
+    """
+    if trace_norm_pt is not None:
+        return (trace_norm_pt - 1.0) / 2.0
+
+    if rho is None:
+        raise ValueError("Must provide either rho or trace_norm_pt.")
+
+    n = rho.shape[0]
+    if dim is None:
+        dA = dB = int(np.sqrt(n))
+        if dA * dB != n:
+            raise ValueError(
+                "Could not infer a symmetric bipartition from rho. "
+                "Please provide dim=(dA, dB) explicitly."
+            )
+        dim = [dA, dB]
+    elif dim[0] * dim[1] != n:
+        raise ValueError(f"dim={dim} inconsistent with rho shape ({n}, {n}).")
+
+    rho_pt = compute_partial_transpose(rho, dim=dim, subsystem=subsystem)
+    return (compute_trace_norm(rho_pt) - 1.0) / 2.0
