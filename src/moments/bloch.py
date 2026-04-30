@@ -7,7 +7,7 @@ import numpy as np
 
 # Auxiliary python functions
 from itertools import product, combinations, chain
-from typing import Sequence, Tuple, Dict, Any
+from typing import Sequence, Tuple, List, Dict, Any, Union
 
 #------------------------------
 # Definitions
@@ -105,6 +105,176 @@ def compute_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
         basis.append(scale * diag_norm * m)
     
     return np.array(basis)
+
+#------------------------------
+# Auxiliary functions
+#------------------------------
+
+def compute_bipartite_region_upper(d: int, a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    """
+    Compute upper bound of the region of valid bipartite states of local dimension d.
+    For more information, see Theorem 1 in 10.1103/PhysRevA.109.012423.
+
+    Parameters
+    ----------
+    d : int
+        Local Hilbert space dimension (must be >= 2).
+    a : float or np.ndarray
+        Euclidean norm ||a|| of the local Bloch vector of the first subsystem.
+        Must be non-negative.
+    b : float or np.ndarray
+        Euclidean norm ||b|| of the local Bloch vector of the second subsystem.
+        Must be non-negative.
+
+    Returns
+    -------
+    t : float or np.ndarray
+        The computed value of ||t||. Same shape as broadcasted inputs.
+
+    Raises
+    ------
+    ValueError
+        If d < 2.
+        If a or b contain negative values.
+        If the argument inside the square root becomes negative
+        (i.e., invalid physical region)..
+    """
+
+    # Convert inputs to arrays for vectorization
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+
+    # Checks
+    if d < 2:
+        raise ValueError("Dimension d must be >= 2.")
+
+    if np.any(a < 0) or np.any(b < 0):
+        raise ValueError("Norms ||a|| and ||b|| must be non-negative.")
+
+    delta = np.abs(a - b)
+
+    # Compute argument inside the square root
+    radicand = d**2 - 1 - a**2 - b**2 - d * np.sqrt(2 * d) * delta + d * delta**2
+
+    if np.any(radicand < 0):
+        raise ValueError(
+            "Negative value inside square root encountered. "
+            "Inputs are outside the physically allowed region."
+        )
+
+    return np.sqrt(radicand)
+
+def compute_bipartite_region_ent(d: int, a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    """
+    Compute lower bound of the region of entangled bipartite states of local dimension d.
+    For more information, see Observation 8 in 10.1103/PhysRevLett.126.150501.
+
+    Parameters
+    ----------
+    d : int
+        Local Hilbert space dimension (must be >= 2).
+    a : float or np.ndarray
+        Euclidean norm ||a|| of the local Bloch vector of the first subsystem.
+        Must be non-negative.
+    b : float or np.ndarray
+        Euclidean norm ||b|| of the local Bloch vector of the second subsystem.
+        Must be non-negative.
+
+    Returns
+    -------
+    t : float or np.ndarray
+        Computed value of ||t||. Shape follows NumPy broadcasting rules.
+
+    Raises
+    ------
+    ValueError
+        If d < 2.
+        If any of a or b are negative.
+        If result is negative (non-physical region detected).
+    """
+
+    a2 = np.asarray(a, dtype=float)**2
+    b2 = np.asarray(b, dtype=float)**2
+
+    # Validity checks
+    if d < 2:
+        raise ValueError("d must be >= 2.")
+
+    if np.any(a < 0) or np.any(b < 0):
+        raise ValueError("Norms ||a|| and ||b|| must be non-negative.")
+
+    # Compute the two branches
+    term1 = (d - 1) * a2 - b2
+    term2 = (d - 1) * b2 - a2
+
+    min_term = np.minimum(term1, term2)
+
+    t2 = (d - 1) + min_term
+
+    # Physical consistency check
+    if np.any(t2 < 0):
+        raise ValueError(
+            "Computed ||t||^2 is negative. Inputs likely outside physical region."
+        )
+
+    return np.sqrt(t2)
+
+def compute_bipartite_region_lower(dim: List[int], a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    """
+    Compute lower bound of the region of valid bipartite states of local dimension d.
+    For more information, see Lemma 7 in 10.1016/j.laa.2019.09.008.
+
+    Parameters
+    ----------
+    dim : List[int]
+        Local Hilbert space dimensions (dA, dB) (all must be >= 2).
+    a : float or np.ndarray
+        Euclidean norm ||a|| of the local Bloch vector of the first subsystem.
+        Must be non-negative.
+    b : float or np.ndarray
+        Euclidean norm ||b|| of the local Bloch vector of the second subsystem.
+        Must be non-negative.
+
+    Returns
+    -------
+    t : float or np.ndarray
+        Computed value of ||t||. Shape follows NumPy broadcasting rules.
+
+    Raises
+    ------
+    ValueError
+        If dA < 2 or dB < 2.
+        If any of a or b are negative.
+        If computed ||t|| is negative (outside physical region).
+    """
+
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+
+    dA, dB = dim
+
+    # Validity checks
+    if dA < 2 or dB < 2:
+        raise ValueError("dA and dB must both be >= 2.")
+
+    if np.any(a < 0) or np.any(b < 0):
+        raise ValueError("Norms ||a|| and ||b|| must be non-negative.")
+
+    # Precompute square roots
+    alpha = np.sqrt(dA - 1)
+    beta = np.sqrt(dB - 1)
+
+    # Compute t norm
+    t = beta * a + alpha * b - alpha * beta
+    bound = np.maximum(0, t)
+
+    # Physical consistency check
+    if np.any(bound < 0):
+        raise ValueError(
+            "Computed ||t|| is negative. Inputs may lie outside the physical region."
+        )
+
+    return bound
 
 #------------------------------
 # Main functions
