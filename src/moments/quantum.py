@@ -327,10 +327,10 @@ def compute_partial_trace_norm(rho: np.ndarray, dim: List[int] | None = None,  s
 
 def compute_negativity(
     rho: np.ndarray | None = None,
-    trace_norm_pt: float | None = None,
+    trace_norm_pt: float | np.ndarray | None = None,
     dim: List[int] | None = None,
     subsystem: int = 1,
-) -> float:
+) -> float | np.ndarray:
     """
     Compute the entanglement negativity of a bipartite quantum state.
 
