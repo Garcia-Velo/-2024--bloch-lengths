@@ -66,7 +66,7 @@ class OptimizationResult:
 # Auxiliary functions
 # ----------------------------------------
 
-def choose_metric(metric: str) -> Callable:
+def choose_metric(d:int, subset_index_map: Dict[Tuple[int, ...], np.ndarray], metric: str) -> Tuple[Callable, Callable]:
     """
     Select the appropriate metric computation function based on the metric name.
 
@@ -77,26 +77,44 @@ def choose_metric(metric: str) -> Callable:
     
     Returns
     -------
-    Callable
-        The function to compute the specified metric.
+    Tuple[Callable, Callable, str]
+        - compute_metric_opt: function used in optimization
+        - compute_metric_report: function used for final reporting
     
     Raises
     ------
     ValueError
         If the metric is not supported.
     """
-    if metric == "concurrence":
-        return compute_concurrence
-    elif metric in {"eof", "entanglement_of_formation", "entanglement-of-formation"}:
-        return compute_eof
-    elif metric in {"trace_norm", "trace norm", "partial_trace_norm", "partial trace norm"}:
-        return compute_partial_trace_norm
-    elif metric == "negativity":
-        return compute_negativity
-    else:
-        raise ValueError("Metric must be 'concurrence' or 'eof'.")
+    is_two_qubit = (d == 4)
+    is_bipartite = (list(subset_index_map.keys()) == 3)
 
-def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], rho: np.ndarray,
+    # --- Concurrence / EOF ---
+    if metric == "concurrence":
+        if not is_two_qubit:
+            raise NotImplementedError("Concurrence optimization is only implemented for 2-qubit systems.")
+        return compute_concurrence, compute_concurrence
+
+    elif metric in {"eof", "entanglement_of_formation", "entanglement-of-formation"}:
+        if not is_two_qubit:
+            raise NotImplementedError("Entanglement of formation optimization is only implemented for 2-qubit systems.")
+        return compute_concurrence, compute_eof
+
+     # --- Trace norm / Negativity ---
+    elif metric in {"trace_norm", "trace norm", "partial_trace_norm", "partial trace norm"}:
+        if not is_bipartite:
+            raise NotImplementedError("Trace norm optimization is only implemented for bipartite systems.")
+        return compute_partial_trace_norm, compute_partial_trace_norm
+
+    elif metric == "negativity":
+        if not is_bipartite:
+            raise NotImplementedError("Trace norm optimization is only implemented for bipartite systems.")
+        return compute_partial_trace_norm, compute_negativity
+    
+    else:
+        raise ValueError("Unsupported metric. Metric must be 'concurrence', 'eof', 'trace_norm' or 'negativity'.")
+
+def trivial_result(d, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], rho: np.ndarray,
                    Rt: Dict[Tuple[int, ...], float], metric: str, result_message: str, result_success: bool = True) -> OptimizationResult:
     """
     Create an OptimizationResult for trivial cases where no optimization is required.
@@ -122,10 +140,11 @@ def trivial_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, .
         The result object with initial and final states set to the same.
     """
     
-    compute_metric = choose_metric(metric)
+    _, compute_metric_report = choose_metric(d, subset_index_map, metric)
+    
     r0 = compute_bloch_vector(tensor_basis, subset_index_map, rho)
     R0 = compute_bloch_norms_from_vector(r0)
-    metric_value = compute_metric(rho)
+    metric_value = compute_metric_report(rho)
 
     moments_distance = {}
     moments_equal = None
@@ -197,27 +216,27 @@ def optimize_moment_preserving_entanglement(d: int, tensor_basis: np.ndarray, su
         If initial state computation fails.
     """
     # --- 1. Find valid initial state ---
-    compute_metric = choose_metric(metric)
+    compute_metric_opt, compute_metric_report = choose_metric(d, subset_index_map, metric)
     
     param_res: ParameterResult | None = None
     while param_res is None or not param_res.optimizer_info["success"]:
         param_res = compute_initial_param_repeat(d, tensor_basis, subset_index_map, Rt)
     
     x0, rho0, r0, R0 = param_res.param, param_res.rho, param_res.bloch, param_res.moments
-    metric0 = compute_metric(rho0)
+    metric0 = compute_metric_report(rho0)
     
     # --- 2. Check trivial cases ---
     SR = sum([Rt[subset]**2 for subset in subset_index_map.keys()])
     
     if SR >= d - 1 - purity_tol:
         return trivial_result(
-            tensor_basis, subset_index_map, rho0, Rt, metric,
+            d, tensor_basis, subset_index_map, rho0, Rt, metric,
             result_message="The input state is numerically pure. Entanglement cannot be improved."
         )
 
     if SR <= 0 + purity_tol:
         return trivial_result(
-            tensor_basis, subset_index_map, np.identity(d, dtype=complex) / d, Rt, metric,
+            d, tensor_basis, subset_index_map, np.identity(d, dtype=complex) / d, Rt, metric,
             result_message="The input state is numerically maximally mixed. Entanglement cannot be improved."
         )
     
@@ -290,11 +309,11 @@ def optimize_moment_preserving_entanglement(d: int, tensor_basis: np.ndarray, su
         if optimization == "maximize":
             def objective(x: np.ndarray) -> float:
                 rho = compute_shared(x)["rho"]
-                return -compute_metric(rho)
+                return -compute_metric_opt(rho)
         elif optimization == "minimize":
             def objective(x: np.ndarray) -> float:
                 rho = compute_shared(x)["rho"]
-                return compute_metric(rho)
+                return compute_metric_opt(rho)
         else:
             raise ValueError(f"Input 'optimization' must be either 'maximize' or 'minimize', got {optimization}")
         return objective
@@ -393,7 +412,7 @@ def optimize_moment_preserving_entanglement(d: int, tensor_basis: np.ndarray, su
     # --- 8. Extract final state ---
     cache_result = compute_shared(result.x)
     rho_opt, r_opt, R_opt = cache_result["rho"], cache_result["r"], cache_result["R"]
-    metric_opt = compute_metric(rho_opt)
+    metric_opt = compute_metric_report(rho_opt)
 
     # --- 9. Run checks on the solution ---
     moments_distance = {}

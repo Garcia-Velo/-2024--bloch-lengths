@@ -164,7 +164,7 @@ def compute_bipartite_region_upper(d: int, a: Union[float, np.ndarray], b: Union
 
     return np.sqrt(radicand)
 
-def compute_bipartite_region_ent(d: int, a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+def compute_bipartite_region_ent(d: int, a: Union[float, np.ndarray], b: Union[float, np.ndarray], tol: float = 1e-12) -> Union[float, np.ndarray]:
     """
     Compute lower bound of the region of entangled bipartite states of local dimension d.
     For more information, see Observation 8 in 10.1103/PhysRevLett.126.150501.
@@ -212,12 +212,12 @@ def compute_bipartite_region_ent(d: int, a: Union[float, np.ndarray], b: Union[f
     t2 = (d - 1) + min_term
 
     # Physical consistency check
-    if np.any(t2 < 0):
+    if np.any(t2 < - tol):
         raise ValueError(
             "Computed ||t||^2 is negative. Inputs likely outside physical region."
         )
 
-    return np.sqrt(t2)
+    return np.sqrt(t2 + tol)
 
 def compute_bipartite_region_lower(dim: List[int], a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
     """
