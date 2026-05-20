@@ -246,34 +246,50 @@ def compute_eof(rho: Optional[np.ndarray] = None, C: Optional[float] = None) -> 
     
     return compute_binary_entropy(p)
 
-def compute_trace_norm(A: np.ndarray) -> float:
+def compute_tr_norm(eigenvalues: np.ndarray | None = None, A: np.ndarray | None = None) -> float:
     """
-    Compute the trace norm of a Hermitian.
+    Compute the trace norm of a Hermitian matrix.
     For a Hermitian matrix A, the trace norm reduces to the sum of absolute eigenvalues.
 
     Parameters
     ----------
-    A : np.ndarray
-        A Hermitian (trace-1) matrix of shape (n, n).
-
+    eigenvalues : np.ndarray, optional
+        Precomputed eigenvalues of A. If provided, A is not used.
+    A : np.ndarray, optional
+        A Hermitian matrix of shape (d, d). Required if eigenvalues is not provided.
+    
     Returns
     -------
     float
         The trace norm of A.
     """
-    eigenvalues = eigh(A, eigvals_only=True)
-    return np.sum(np.abs(eigenvalues))
+    if eigenvalues is not None:
+        if np.all(np.isreal(eigenvalues)):
+            return float(np.sum(np.abs(eigenvalues)))
+        else:
+            raise ValueError("Eigenvalues must be real for a Hermitian matrix.")
+    elif A is None:
+        raise ValueError("Must provide either eigenvalues or the Hermitian matrix.")
+    else:
+        if A.ndim != 2 or A.shape[0] != A.shape[1]:
+            raise ValueError("'A' must be a square matrix.")
+        else:
+            if not np.allclose(A, A.conj().T):
+                raise ValueError("'A' must be Hermitian.")
+            else:
+                eigvals = eigh(A, eigvals_only=True)
+        return float(np.sum(np.abs(eigvals)))
 
-def compute_partial_transpose(rho: np.ndarray, dim: List[int], subsystem: int = 1) -> np.ndarray:
+def compute_pt(dim: List[int], A: np.ndarray, subsystem: int = 1) -> np.ndarray:
     """
     Compute the partial transpose of a bipartite density matrix.
 
     Parameters
     ----------
-    rho : np.ndarray
-        Density matrix of shape (dA*dB, dA*dB).
-    dim : tuple[int, int] | int
+    dim : tuple[int, int]
         Local Hilbert space dimensions (dA, dB).
+    A : np.ndarray
+        Matrix to be partially transposed.
     subsystem : int
         Subsystem to transpose: 0 for A, 1 for B (default).
 
@@ -282,26 +298,30 @@ def compute_partial_transpose(rho: np.ndarray, dim: List[int], subsystem: int = 
     np.ndarray
         The partially transposed matrix rho^Gamma.
     """
+    if len(dim) != 2:
+        raise NotImplementedError("Only bipartite systems are implemented for partial transpose.")
+    
     dA, dB = dim
-    # Reshape into (dA, dB, dA, dB) tensor, then swap indices of target subsystem
-    rho_tensor = rho.reshape(dA, dB, dA, dB)
-    if subsystem == 1:
-        rho_pt = rho_tensor.transpose(0, 3, 2, 1)  # transpose B: swap j <-> l
-    else:
-        rho_pt = rho_tensor.transpose(2, 1, 0, 3)  # transpose A: swap i <-> k
-    return rho_pt.reshape(dA * dB, dA * dB)
+    A_tensor = A.reshape(dA, dB, dA, dB)
 
-def compute_partial_trace_norm(rho: np.ndarray, dim: List[int] | None = None,  subsystem: int = 1) -> float:
+    if subsystem == 1:
+        A_pt = A_tensor.transpose(0, 3, 2, 1)
+    else:
+        A_pt = A_tensor.transpose(2, 1, 0, 3)
+    return A_pt.reshape(dA * dB, dA * dB)
+
+def compute_pt_norm(dim: List[int], eigenvalues: np.ndarray | None = None, A: np.ndarray | None = None, subsystem: int = 0) -> float:
     """
     Compute the trace norm  of the the partial transpose of a bipartite density matrix.
 
     Parameters
     ----------
-    rho : np.ndarray
-        Density matrix of shape (dA*dB, dA*dB).
-    dim : List[int], optional
-        Local Hilbert space dimensions (dA, dB). Required if rho is provided and the subsystems are not equal in dimension.
-        If None and rho is provided, a symmetric bipartition dA = dB = sqrt(n) is assumed.
+    dim : List[int]
+        Local Hilbert space dimensions.
+    eigenvalues : np.ndarray, optional
+        Precomputed eigenvalues of rho^Gamma. If provided, rho is not used.
+    A : np.ndarray, optional
+        Matrix to be partially transposed. Required if eigenvalues is not provided.
     subsystem : int
         Subsystem to partially transpose: 0 for A, 1 for B (default).
 
@@ -309,28 +329,63 @@ def compute_partial_trace_norm(rho: np.ndarray, dim: List[int] | None = None,  s
     -------
     float
         The trace norm of rho^Gamma.
+    
+    Raises
+    ------
+    ValueError
+        If 'rho' is not a square matrix or if 'dim' is inconsistent with the shape of 'rho'.
     """
-    n = rho.shape[0]
-    if dim is None:
-        dA = dB = int(np.sqrt(n))
-        if dA * dB != n:
-            raise ValueError(
-                "Could not infer a symmetric bipartition from rho. "
-                "Please provide dim=(dA, dB) explicitly."
-            )
-        dim = [dA, dB]
-    elif dim[0] * dim[1] != n:
-        raise ValueError(f"dim={dim} inconsistent with rho shape ({n}, {n}).")
+    if eigenvalues is not None:
+        return compute_tr_norm(eigenvalues=eigenvalues)
+    elif A is None:
+        raise ValueError("Must provide either A or eigenvalues.")
+    else:
+        d = A.shape[0]
+        if dim[0] * dim[1] != d:
+            raise ValueError(f"dim={dim} inconsistent with A shape ({d}, {d}).")
+        
+        A_pt = compute_pt(dim, A, subsystem=subsystem)
+        return compute_tr_norm(A=A_pt)
 
-    rho_pt = compute_partial_transpose(rho, dim=dim, subsystem=subsystem)
-    return compute_trace_norm(rho_pt)
+def compute_pt_norm_jac(dim: List[int], eigenvalues: np.ndarray | None = None, eigenvectors: np.ndarray | None = None,
+                        A: np.ndarray | None = None, subsystem: int = 0) -> np.ndarray:
+    """
+    Compute the Jacobian of the trace norm of the partial transpose with respect to the original matrix A.
+
+    Parameters
+    ----------
+    dim : List[int]
+        Local Hilbert space dimensions.
+    eigenvalues : np.ndarray, optional
+        Precomputed eigenvalues of rho^Gamma. If provided, rho is not used. If provided, U must also be provided.
+    eigenvectors : np.ndarray, optional
+        Unitary matrix of eigenvectors of rho^Gamma. Required if eigenvalues is provided.
+    A : np.ndarray, optional
+        Matrix to be partially transposed. Required if eigenvalues is not provided.
+    subsystem : int
+        Subsystem to partially transpose: 0 for A, 1 for B (default).
+
+    Returns
+    -------
+    np.ndarray
+        The Jacobian of the trace norm of the partial transpose with respect to A.
+    """
+    if eigenvalues is not None and eigenvectors is not None:
+        eigvals = eigenvalues.copy()
+        eigvecs = eigenvectors.copy()
+    elif A is None:
+        raise ValueError("Must provide either A or both eigenvalues and eigenvectors.")
+    else:
+        eigvals, eigvecs = eigh(A)
+    S = (eigvecs * np.sign(eigvals)) @ eigvecs.conj().T
+    return compute_pt(dim, S)
 
 def compute_negativity(
     rho: np.ndarray | None = None,
     trace_norm_pt: float | np.ndarray | None = None,
     dim: List[int] | None = None,
     subsystem: int = 1,
-) -> float | np.ndarray:
+    ) -> float | np.ndarray:
     """
     Compute the entanglement negativity of a bipartite quantum state.
 
@@ -376,5 +431,5 @@ def compute_negativity(
     elif dim[0] * dim[1] != n:
         raise ValueError(f"dim={dim} inconsistent with rho shape ({n}, {n}).")
 
-    rho_pt = compute_partial_transpose(rho, dim=dim, subsystem=subsystem)
-    return (compute_trace_norm(rho_pt) - 1.0) / 2.0
+    rho_pt = compute_pt(dim, rho, subsystem)
+    return (compute_tr_norm(rho_pt) - 1.0) / 2.0
