@@ -67,7 +67,7 @@ class OptimizationResult:
 # Auxiliary functions
 # ----------------------------------------
 
-def choose_metric(dim: list[int], metric: str) -> Tuple[Callable, Callable, Callable] | Tuple[Callable, Callable, None]:
+def choose_metric(dim: list[int], metric: str) -> Tuple[Callable, Callable, Callable] | Tuple[Callable, Callable, None | Callable]:
     """
     Select the appropriate metric computation function based on the metric name.
 
