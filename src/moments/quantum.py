@@ -432,4 +432,4 @@ def compute_negativity(
         raise ValueError(f"dim={dim} inconsistent with rho shape ({n}, {n}).")
 
     rho_pt = compute_pt(dim, rho, subsystem)
-    return (compute_tr_norm(rho_pt) - 1.0) / 2.0
+    return (compute_tr_norm(A = rho_pt) - 1.0) / 2.0
