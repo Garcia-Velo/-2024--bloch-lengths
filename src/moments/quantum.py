@@ -8,7 +8,7 @@ import numpy as np
 from scipy.linalg import eigh
 
 # Auxiliary python functions
-from typing import List, Tuple, Dict, Union, Optional
+from typing import List, Tuple, Dict, Sequence, Iterable, Union, Optional
 
 # ----------------------------------------
 # State preparation and validation
@@ -263,52 +263,61 @@ def compute_tr_norm(eigenvalues: np.ndarray | None = None, A: np.ndarray | None 
     float
         The trace norm of A.
     """
-    if eigenvalues is not None:
-        if np.all(np.isreal(eigenvalues)):
-            return float(np.sum(np.abs(eigenvalues)))
-        else:
-            raise ValueError("Eigenvalues must be real for a Hermitian matrix.")
-    elif A is None:
-        raise ValueError("Must provide either eigenvalues or the Hermitian matrix.")
+    if eigenvalues is None:
+        if A is None:
+            raise ValueError("Provide eigenvalues or matrix.")
+        if A.shape[0] != A.shape[1]:
+            raise ValueError("Matrix must be square.")
+        if not np.allclose(A, A.conj().T):
+            raise ValueError("Matrix must be Hermitian.")
+        eigvals = eigh(A, eigvals_only=True)
     else:
-        if A.ndim != 2 or A.shape[0] != A.shape[1]:
-            raise ValueError("'A' must be a square matrix.")
-        else:
-            if not np.allclose(A, A.conj().T):
-                raise ValueError("'A' must be Hermitian.")
-            else:
-                eigvals = eigh(A, eigvals_only=True)
-        return float(np.sum(np.abs(eigvals)))
+        eigvals = eigenvalues.copy()
+    
+    return float(np.sum(np.abs(eigvals)))
 
-def compute_pt(dim: List[int], A: np.ndarray, subsystem: int = 1) -> np.ndarray:
+def compute_pt(dim: Sequence[int], A: np.ndarray, subsystem: int | Iterable[int] = 1) -> np.ndarray:
     """
-    Compute the partial transpose of a bipartite density matrix.
+    Compute the partial transpose of a multipartite operator.
 
     Parameters
     ----------
-    dim : tuple[int, int]
-        Local Hilbert space dimensions (dA, dB).
-    A : np.ndarray
-        Matrix to be partially transposed.
-    subsystem : int
-        Subsystem to transpose: 0 for A, 1 for B (default).
+    dim : Sequence[int]
+        Local Hilbert-space dimensions.
+    A : ndarray
+        Matrix of shape (prod(dim), prod(dim)).
+    subsystem : int or iterable[int], default=1
+        Which subsystem(s) to transpose.
 
     Returns
     -------
-    np.ndarray
-        The partially transposed matrix rho^Gamma.
+    ndarray
+        Partial transpose.
     """
-    if len(dim) != 2:
-        raise NotImplementedError("Only bipartite systems are implemented for partial transpose.")
-    
-    dA, dB = dim
-    A_tensor = A.reshape(dA, dB, dA, dB)
+    dim = tuple(dim)
+    N = len(dim)
+    d = int(np.prod(dim))
 
-    if subsystem == 1:
-        A_pt = A_tensor.transpose(0, 3, 2, 1)
+    if A.shape != (d, d):
+        raise ValueError("A must have shape (prod(dim), prod(dim)).")
+
+    if isinstance(subsystem, int):
+        subsystem = (subsystem,)
     else:
-        A_pt = A_tensor.transpose(2, 1, 0, 3)
-    return A_pt.reshape(dA * dB, dA * dB)
+        subsystem = tuple(subsystem)
+
+    if any(s < 0 or s >= N for s in subsystem):
+        raise ValueError("Invalid subsystem index.")
+
+    # Reshape into a tensor with one input and one output index per subsystem.
+    T = A.reshape(dim + dim)
+
+    # Swap input/output indices for the selected subsystems.
+    perm = list(range(2 * N))
+    for s in subsystem:
+        perm[s], perm[N + s] = perm[N + s], perm[s]
+
+    return T.transpose(perm).reshape(d, d)
 
 def compute_pt_norm(dim: List[int], eigenvalues: np.ndarray | None = None, A: np.ndarray | None = None, subsystem: int = 0) -> float:
     """
@@ -383,8 +392,8 @@ def compute_pt_norm_jac(dim: List[int], eigenvalues: np.ndarray | None = None, e
 def compute_negativity(
     rho: np.ndarray | None = None,
     trace_norm_pt: float | np.ndarray | None = None,
-    dim: List[int] | None = None,
-    subsystem: int = 1,
+    dim: Sequence[int] | None = None,
+    subsystem: int | Sequence[int] = 1,
     ) -> float | np.ndarray:
     """
     Compute the entanglement negativity of a bipartite quantum state.
@@ -428,8 +437,8 @@ def compute_negativity(
                 "Please provide dim=(dA, dB) explicitly."
             )
         dim = [dA, dB]
-    elif dim[0] * dim[1] != n:
-        raise ValueError(f"dim={dim} inconsistent with rho shape ({n}, {n}).")
+    elif np.prod(dim) != n:
+        raise ValueError(f"dim={dim} inconsistent with rho shape.")
 
     rho_pt = compute_pt(dim, rho, subsystem)
-    return (compute_tr_norm(A = rho_pt) - 1.0) / 2.0
+    return (compute_tr_norm(A=rho_pt) - 1.0) / 2.0
