@@ -135,7 +135,7 @@ def find_decomposable_witness(
 
     return DecomposableWitnessResult(minval=minval, witness=witness)
 
-def compute_decomposable_monotone(
+def compute_gm_negativity(
     dim: Sequence[int],
     rho: np.ndarray,
     solver: Optional[str] = None,
