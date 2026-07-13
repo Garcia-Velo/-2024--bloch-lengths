@@ -13,7 +13,7 @@ from typing import Sequence, Tuple, List, Dict, Any, Union
 # Definitions
 #------------------------------
 
-def compute_pauli_basis() -> np.ndarray:
+def generate_pauli_basis() -> np.ndarray:
     """
     Initialize the Pauli basis of a one-qubit system. This includes the identity matrix as the first element of the basis.
 
@@ -34,7 +34,7 @@ def compute_pauli_basis() -> np.ndarray:
 import numpy as np
 
 
-def compute_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
+def generate_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
     """
     Generate the generalized Gell-Mann basis for a qudit of local dimension d.
     The basis consists of d^2 Hermitian matrices, including the identity as the first element.
