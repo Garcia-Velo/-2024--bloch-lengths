@@ -78,7 +78,7 @@ def generate_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
     # Identity
     basis.append(np.eye(d, dtype=complex))
 
-    # Symmetric off-diagonal
+    # Symmetric off-diagonal: |j><k| + |k><j| for j > k ---
     for k in range(d):
         for j in range(k):
             m = np.zeros((d, d), dtype=complex)

@@ -15,7 +15,8 @@ from typing import Tuple, Dict, Callable, Any
 # Local importations
 from moments.bloch import compute_bloch_vector, compute_bloch_norms_from_vector
 from moments.initialization import ParameterResult, compute_initial_param_repeat, compute_param_from_X, compute_X_from_param, compute_dm_from_X
-from moments.quantum import compute_is_valid_dm, compute_concurrence, compute_eof, compute_pt, compute_pt_norm, compute_pt_norm_jac, compute_negativity
+from moments.ent_meas import compute_concurrence, compute_eof, compute_pt, compute_pt_norm, compute_pt_norm_jac, compute_negativity
+from moments.quantum import compute_is_valid_dm
 
 # ----------------------------------------
 # Definitions
