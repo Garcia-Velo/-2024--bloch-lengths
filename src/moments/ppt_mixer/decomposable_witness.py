@@ -7,7 +7,7 @@ import numpy as np
 import cvxpy as cp
 
 # Auxiliary python functions
-from typing import NamedTuple, Optional, Sequence
+from typing import NamedTuple, Sequence
 from cvxpy.constraints.constraint import Constraint
 
 # Local importations
@@ -41,10 +41,10 @@ class DecomposableWitnessResult(NamedTuple):
 def find_decomposable_witness(
         dim: Sequence[int],
         rho: np.ndarray,
-        solver: Optional[str] = None,
+        solver: str | None = None,
         precision: float = 1e-12,
         verbose: bool = False,
-        solver_kwargs: Optional[dict] = None,
+        solver_kwargs: dict | None = None,
         ) -> DecomposableWitnessResult:
     """
     Solves the semidefinite program of eq. (4) in Phys. Rev. Lett. 106, 190502 (2011).
@@ -138,10 +138,10 @@ def find_decomposable_witness(
 def compute_gm_negativity(
     dim: Sequence[int],
     rho: np.ndarray,
-    solver: Optional[str] = None,
+    solver: str | None = None,
     precision: float = 1e-12,
     verbose: bool = False,
-    solver_kwargs: Optional[dict] = None,
+    solver_kwargs: dict | None = None,
 ) -> float:
     """
     Compute the genuine multipartite entanglement monotone genuine multipartite negativity.

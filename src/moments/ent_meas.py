@@ -8,8 +8,7 @@ import numpy as np
 from scipy.linalg import eigh
 
 # Auxiliary python functions
-from functools import reduce
-from typing import List, Sequence, Iterable, Union, Optional
+from typing import Sequence, Iterable
 
 # ----------------------------------------
 # Entanglement measures
@@ -54,7 +53,7 @@ def compute_concurrence(rho: np.ndarray) -> float:
 
     return max(0.0, eigvals[0] - eigvals[1] - eigvals[2] - eigvals[3]).real
 
-def compute_binary_entropy(x: Union[np.ndarray, float], tol: float = 1e-12) -> Union[np.ndarray, float]:
+def compute_binary_entropy(x: np.ndarray | float, tol: float = 1e-12) -> np.ndarray | float:
     """
     Compute the binary entropy function H(x) = -x log2 x - (1-x) log2 (1-x),
     with tolerance for limiting cases.
@@ -88,7 +87,7 @@ def compute_binary_entropy(x: Union[np.ndarray, float], tol: float = 1e-12) -> U
     # Return a float if input was scalar, otherwise return array
     return result.item() if result.ndim == 0 else result
 
-def compute_eof(rho: Optional[np.ndarray] = None, C: Optional[float] = None) -> Union[np.ndarray, float]:
+def compute_eof(rho: np.ndarray | None = None, C: np.ndarray | float | None = None) -> np.ndarray | float:
     """
     Compute the entanglement of formation for a two-qubit state.
 
@@ -195,7 +194,7 @@ def compute_pt(dim: Sequence[int], A: np.ndarray, subsystem: int | Iterable[int]
 
     return T.transpose(perm).reshape(d, d)
 
-def compute_pt_norm(dim: List[int], eigenvalues: np.ndarray | None = None, A: np.ndarray | None = None, subsystem: int = 0) -> float:
+def compute_pt_norm(dim: list[int], eigenvalues: np.ndarray | None = None, A: np.ndarray | None = None, subsystem: int = 0) -> float:
     """
     Compute the trace norm  of the the partial transpose of a bipartite density matrix.
 
@@ -229,10 +228,10 @@ def compute_pt_norm(dim: List[int], eigenvalues: np.ndarray | None = None, A: np
         if dim[0] * dim[1] != d:
             raise ValueError(f"dim={dim} inconsistent with A shape ({d}, {d}).")
         
-        A_pt = compute_pt(dim, A, subsystem=subsystem)
+        A_pt = compute_pt(dim=dim, A=A, subsystem=subsystem)
         return compute_tr_norm(A=A_pt)
 
-def compute_pt_norm_jac(dim: List[int], eigenvalues: np.ndarray | None = None, eigenvectors: np.ndarray | None = None,
+def compute_pt_norm_jac(dim: list[int], eigenvalues: np.ndarray | None = None, eigenvectors: np.ndarray | None = None,
                         A: np.ndarray | None = None, subsystem: int = 0) -> np.ndarray:
     """
     Compute the Jacobian of the trace norm of the partial transpose with respect to the original matrix A.
@@ -266,9 +265,9 @@ def compute_pt_norm_jac(dim: List[int], eigenvalues: np.ndarray | None = None, e
     return compute_pt(dim, S)
 
 def compute_negativity(
+    dim: Sequence[int] | None = None,
     rho: np.ndarray | None = None,
     trace_norm_pt: float | np.ndarray | None = None,
-    dim: Sequence[int] | None = None,
     subsystem: int | Sequence[int] = 1,
     ) -> float | np.ndarray:
     """

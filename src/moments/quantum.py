@@ -7,7 +7,7 @@ import numpy as np
 
 # Auxiliary python functions
 from functools import reduce
-from typing import Tuple, Dict, Sequence
+from typing import Sequence
 
 # ----------------------------------------
 # Basic algebra
@@ -102,7 +102,7 @@ def compute_outer_product(psi: np.ndarray, phi: np.ndarray) -> np.ndarray:
 # State preparation and validation
 # ----------------------------------------
 
-def compute_is_valid_dm(rho: np.ndarray, tol: float = 1e-10) -> Tuple[bool, Dict]:
+def compute_is_valid_dm(rho: np.ndarray, tol: float = 1e-10) -> tuple[bool, dict]:
     """
     Check whether a matrix is a valid density matrix.
 

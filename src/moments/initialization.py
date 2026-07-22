@@ -8,7 +8,7 @@ from scipy.optimize import minimize, OptimizeResult
 
 # Auxiliary python functions
 from dataclasses import dataclass
-from typing import Tuple, Dict, Union, Any
+from typing import Any
 
 # Local importations
 from moments.bloch import compute_bloch_vector, compute_bloch_norms_from_vector
@@ -42,11 +42,11 @@ class ParameterResult:
     """
     param: np.ndarray
     rho: np.ndarray
-    bloch: Dict[Tuple[int, ...], np.ndarray]
-    moments: Dict[Tuple[int, ...], float]
+    bloch: dict[tuple[int, ...], np.ndarray]
+    moments: dict[tuple[int, ...], float]
     loss: float
-    checks: Dict[str, Any]
-    optimizer_info: Dict[str, Any]
+    checks: dict[str, Any]
+    optimizer_info: dict[str, Any]
 
 #------------------------------
 # Parametrization of the density matrix
@@ -224,7 +224,7 @@ def compute_dm_from_X(X: np.ndarray) -> np.ndarray:
 # Auxiliary functions for optimization
 #------------------------------
 
-def build_parameter_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float],
+def build_parameter_result(tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray], Rt: dict[tuple[int, ...], float],
                            optimizer_res: OptimizeResult, cholesky: bool = False, psd_tol: float = 1e-10) -> ParameterResult:
     """
     Build the ParameterResult from optimized parameters and optimizer result.
@@ -296,8 +296,8 @@ def build_parameter_result(tensor_basis: np.ndarray, subset_index_map: Dict[Tupl
 # Optimization functions
 #------------------------------
 
-def initial_state_loss_grad(x: np.ndarray, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
-                            R_target: Dict[Tuple[int, ...], float], cholesky: bool = False, tol: float = 1e-12) -> Tuple[Union[float, np.floating[Any]], np.ndarray]:
+def initial_state_loss_grad(x: np.ndarray, tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray],
+                            R_target: dict[tuple[int, ...], float], cholesky: bool = False, tol: float = 1e-12) -> tuple[float | np.floating[Any], np.ndarray]:
     """
     Objective function and its gradient for optimization of a density matrix
     with prescribed Bloch vector norms.
@@ -377,7 +377,7 @@ def initial_state_loss_grad(x: np.ndarray, tensor_basis: np.ndarray, subset_inde
 
     return loss, grad
 
-def compute_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float],
+def compute_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray], Rt: dict[tuple[int, ...], float],
                           cholesky: bool = False, psd_tol: float = 1e-10) -> OptimizeResult:
     """
     Compute initial parameters for the density matrix by optimizing over random initializations.
@@ -420,7 +420,7 @@ def compute_initial_param(d: int, tensor_basis: np.ndarray, subset_index_map: Di
     
     return res
 
-def compute_initial_param_repeat(d: int, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], Rt: Dict[Tuple[int, ...], float],
+def compute_initial_param_repeat(d: int, tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray], Rt: dict[tuple[int, ...], float],
                                  cholesky: bool = False, psd_tol: float = 1e-10, attempts: int = 5) -> ParameterResult:
     """
     Compute initial parameters by trying multiple random initializations and selecting the best result.

@@ -7,7 +7,7 @@ import numpy as np
 
 # Auxiliary python functions
 from itertools import product, combinations, chain
-from typing import Sequence, Tuple, List, Dict, Any, Union
+from typing import Sequence, Any
 
 #------------------------------
 # Definitions
@@ -110,7 +110,7 @@ def generate_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
 # Auxiliary functions
 #------------------------------
 
-def compute_bipartite_region_upper(d: int, a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+def compute_bipartite_region_upper(d: int, a: float | np.ndarray, b: float | np.ndarray) -> float | np.ndarray:
     """
     Compute upper bound of the region of valid bipartite states of local dimension d.
     For more information, see Theorem 1 in 10.1103/PhysRevA.109.012423.
@@ -164,7 +164,7 @@ def compute_bipartite_region_upper(d: int, a: Union[float, np.ndarray], b: Union
 
     return np.sqrt(radicand)
 
-def compute_bipartite_region_ent(d: int, a: Union[float, np.ndarray], b: Union[float, np.ndarray], tol: float = 1e-12) -> Union[float, np.ndarray]:
+def compute_bipartite_region_ent(d: int, a: float | np.ndarray, b: float | np.ndarray, tol: float = 1e-12) -> float | np.ndarray:
     """
     Compute lower bound of the region of entangled bipartite states of local dimension d.
     For more information, see Observation 8 in 10.1103/PhysRevLett.126.150501.
@@ -219,7 +219,7 @@ def compute_bipartite_region_ent(d: int, a: Union[float, np.ndarray], b: Union[f
 
     return np.sqrt(t2 + tol)
 
-def compute_bipartite_region_lower(dim: List[int], a: Union[float, np.ndarray], b: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+def compute_bipartite_region_lower(dim: list[int], a: float | np.ndarray, b: float | np.ndarray) -> float | np.ndarray:
     """
     Compute lower bound of the region of valid bipartite states of local dimension d.
     For more information, see Lemma 7 in 10.1016/j.laa.2019.09.008.
@@ -345,7 +345,7 @@ def compute_tensor_basis(local_bases: Sequence[np.ndarray]) -> np.ndarray:
     
     return basis
 
-def compute_subset_index_map(local_basis_sizes: Sequence[int]) -> Dict[Tuple[int, ...], np.ndarray]:
+def compute_subset_index_map(local_basis_sizes: Sequence[int]) -> dict[tuple[int, ...], np.ndarray]:
     """
     Compute index mappings for all subsystem subsets in a tensor-product basis.
 
@@ -411,7 +411,7 @@ def compute_subset_index_map(local_basis_sizes: Sequence[int]) -> Dict[Tuple[int
     
     return subset_index_map
 
-def compute_bloch_vector(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray], rho: np.ndarray) -> Dict[Tuple[int, ...], np.ndarray]:
+def compute_bloch_vector(tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray], rho: np.ndarray) -> dict[tuple[int, ...], np.ndarray]:
     """
     Compute the generalized Bloch vector coefficients of a density matrix.
 
@@ -450,8 +450,8 @@ def compute_bloch_vector(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[
     return {subset: coeffs[indices].real
             for subset, indices in subset_index_map.items()}
 
-def compute_dm_from_bloch(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
-                  bloch_coeffs: Dict[Tuple[int, ...], np.ndarray], identity_index: int = 0) -> np.ndarray:
+def compute_dm_from_bloch(tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray],
+                  bloch_coeffs: dict[tuple[int, ...], np.ndarray], identity_index: int = 0) -> np.ndarray:
     """
     Reconstruct a density matrix from generalized Bloch coefficients.
 
@@ -505,8 +505,8 @@ def compute_dm_from_bloch(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple
     # Normalization
     return (1/d) * rho
 
-def compute_bloch_norms_from_dm(tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
-                        rho: np.ndarray) -> Dict[Tuple[int, ...], np.floating[Any]]:
+def compute_bloch_norms_from_dm(tensor_basis: np.ndarray, subset_index_map: dict[tuple[int, ...], np.ndarray],
+                        rho: np.ndarray) -> dict[tuple[int, ...], np.floating[Any]]:
     """
     Compute the norms of Bloch vector components for all subsystem subsets.
 
@@ -545,7 +545,7 @@ def compute_bloch_norms_from_dm(tensor_basis: np.ndarray, subset_index_map: Dict
     return {subset: np.linalg.norm(coeffs[indices])
             for subset, indices in subset_index_map.items()}
 
-def compute_bloch_norms_from_vector(bloch_coeffs: Dict[Tuple[int, ...], np.ndarray], tol: float = 0.0) -> Dict[Tuple[int, ...], float]:
+def compute_bloch_norms_from_vector(bloch_coeffs: dict[tuple[int, ...], np.ndarray], tol: float = 0.0) -> dict[tuple[int, ...], float]:
     """
     Compute the Euclidean norms of Bloch vectors for all subsystem subsets.
 
