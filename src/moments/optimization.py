@@ -68,7 +68,7 @@ class OptimizationResult:
 # Auxiliary functions
 # ----------------------------------------
 
-def choose_metric(dim: list[int], metric: str) -> Tuple[Callable, Callable, Callable] | Tuple[Callable, Callable, None | Callable]:
+def choose_metric(dim: list[int], metric: str) -> Tuple[Callable, Callable, None | Callable]:
     """
     Select the appropriate metric computation function based on the metric name.
 
@@ -146,8 +146,7 @@ def trivial_result(dim, tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[i
     r0 = compute_bloch_vector(tensor_basis, subset_index_map, rho)
     R0 = compute_bloch_norms_from_vector(r0)
     metric_value = compute_metric_report(dim, A=rho)
-
-    moments_distance = {subset: float(abs(R0[subset] - Rt[subset])) for subset in subset_index_map}
+    
     moments_equal = np.allclose(np.array(list(R0.values())), np.array(list(Rt.values())))
     moments_difference = float(np.mean([R0[subset] - Rt[subset] for subset in subset_index_map]))
 
@@ -216,7 +215,7 @@ def compute_chain_rule_grad(d: int, grad_rho: np.ndarray, data: Dict, cholesky_o
 
 def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_index_map: Dict[Tuple[int, ...], np.ndarray],
                                             Rt: Dict[Tuple[int, ...], float], optimization: str = "minimize",
-                                            metric: str = "concurrence", cholesky_opt: bool = False, exact_jac: bool = False,
+                                            metric: str = "negativity", cholesky_opt: bool = True, exact_jac: bool = False,
                                             purity_tol: float = 1e-10, psd_tol: float = 1e-10, jac_tol: float = 1e-10,
                                             local_maxiter: int = 500) -> OptimizationResult:
     """
@@ -232,6 +231,8 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         Mapping from subsystem subsets to indices in tensor_basis.
     Rt : Dict[Tuple[int, ...], float]
         Target Bloch vector norms for each subsystem subset.
+    x0_warm: np.ndarray | None, defalt=None
+        Guess of an initial state
     metric : str, default="concurrence"
         The entanglement metric to optimize ('concurrence' or 'eof').
     optimization : str, default="minimize"
@@ -277,7 +278,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     
     x0, rho0, r0, R0 = param_res.param, param_res.rho, param_res.bloch, param_res.moments
     metric0 = compute_metric_report(dim, A=rho0)
-    
+
     # --- 2. Check trivial cases ---
     SR = sum([Rt[subset]**2 for subset in subset_index_map.keys()])
     
@@ -505,10 +506,10 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     if exact_jac:
         minimize_kwargs["jac"] = compute_jac_metric
     result = minimize(objective, x0, **minimize_kwargs)
-    
+
     # --- 10. Extract final state ---
     cache_result = compute_shared(result.x)
-    rho_opt, r_opt, R_opt = cache_result["rho"], cache_result["r"], cache_result["R"]
+    x_opt, rho_opt, r_opt, R_opt = cache_result["x"], cache_result["rho"], cache_result["r"], cache_result["R"]
     metric_opt = compute_metric_report(dim, A=rho_opt)
 
     # --- 11. Run checks on the solution ---
