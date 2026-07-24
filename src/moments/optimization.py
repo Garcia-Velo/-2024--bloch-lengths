@@ -120,7 +120,7 @@ def choose_metric(dim: list[int], metric: str) -> tuple[Callable, Callable, None
             raise NotImplementedError("Entanglement of formation optimization is only implemented for 2-qubit systems.")
         def compute_metric_report(inputs: MetricInputs) -> float:
             if inputs.A is not None:
-                return compute_eof(rho=inputs.A)
+                return float(compute_eof(rho=inputs.A))
             else:
                 raise ValueError("Must provide A.")
         def compute_metric_opt(inputs: MetricInputs) -> float:
@@ -145,8 +145,8 @@ def choose_metric(dim: list[int], metric: str) -> tuple[Callable, Callable, None
         def compute_metric_report(inputs: MetricInputs) -> float:
             if inputs.eigenvalues is not None:
                 A_pt = compute_tr_norm(eigenvalues=inputs.eigenvalues)
-                return compute_negativity(trace_norm_pt=A_pt)
-            return compute_negativity(rho=inputs.A, dim=inputs.dim)
+                return float(compute_negativity(trace_norm_pt=A_pt))
+            return float(compute_negativity(rho=inputs.A, dim=inputs.dim))
     
         def compute_metric_opt(inputs: MetricInputs) -> float:
             if inputs.eigenvalues is not None:
@@ -411,6 +411,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
                 eigvals, eigvecs = eigh(rho_pt)
                 metric_inputs = MetricInputs(dim=dim, eigenvalues=eigvals, eigenvectors=eigvecs)
 
+                assert compute_metric_jac is not None
                 cache.update({
                     "metric": compute_metric_opt(metric_inputs),
                     "S_pt": compute_metric_jac(metric_inputs),
