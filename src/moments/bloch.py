@@ -31,9 +31,6 @@ def generate_pauli_basis() -> np.ndarray:
     # Return as a numpy asrray for easier handling
     return np.array([sigma_0, sigma_1, sigma_2, sigma_3])
 
-import numpy as np
-
-
 def generate_gell_mann_basis(d: int, normalize: bool = True) -> np.ndarray:
     """
     Generate the generalized Gell-Mann basis for a qudit of local dimension d.
