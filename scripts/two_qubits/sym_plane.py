@@ -71,7 +71,7 @@ def basis_definitions(dim: list[int]) -> tuple[np.ndarray, dict[tuple[int, ...],
 
     # Compute tensor basis of the N qubit system
     tensor_basis = compute_tensor_basis(local_bases)
-    # Compute index mappings from basis elements to Bloch vector elements.
+    # Compute index mappings from basis elements to Bloch vector elements
     subset_index_map = compute_subset_index_map(local_basis_sizes)
 
     return tensor_basis, subset_index_map
@@ -83,7 +83,7 @@ def basis_definitions(dim: list[int]) -> tuple[np.ndarray, dict[tuple[int, ...],
 
 def space_discretization(D: int) -> dict[str, Any]:
     """
-    Create a grid for the optimizaion and parametrize the phisically allowed bloch lengths.
+    Create a grid for the optimizaion and parametrize the phisically allowed Bloch lengths.
 
     Parameters
     ----------
@@ -116,13 +116,12 @@ def space_discretization(D: int) -> dict[str, Any]:
     # Extract the indices of all physically allowed grid points for the loop.
     indices = np.where(mask_state)
 
-    # Identify boundaries between regions.
+    # Identify each region.
     sep_vals = np.full_like(X, np.nan)
     sep_vals[X <= 1 / 3] = np.sqrt(1 / 3 - 2 * X[X <= 1 / 3] ** 2)
     sep_vals[(X > 1 / 3) & (X <= 1 / 2)] = 1 - 2 * X[(X > 1 / 3) & (X <= 1 / 2)]
     sep_vals[(X > 1 / 2)] = 2 * X[(X > 1 / 2)] - 1
 
-    # Identify each region.
     mask_ent = (Z ** 2 <= 3 - 2 * X ** 2) & (Z > 1)
     mask_mix = (Z <= 1) & (Z > sep_vals)
     mask_sep = (Z >= 0) & (Z <= sep_vals)
@@ -229,7 +228,7 @@ def main_optimization(run_kwargs: dict[str, Any], grid: dict[str, Any], data_dir
     for counter, (idx, jdx) in enumerate(zip(indices[0], indices[1]), 1):
         t0 = time.time()
 
-        # Read Bloch lengths for each poitn.
+        # Read Bloch lengths for each point.
         x_val = X[idx, jdx]
         z_val = Z[idx, jdx]
 
@@ -249,7 +248,7 @@ def main_optimization(run_kwargs: dict[str, Any], grid: dict[str, Any], data_dir
             continue
         ent_max[idx, jdx] = max_result.metric_final
 
-        # Solve the minimization problem with a different strategy in each region.
+        # Solve the minimization problem.
         run_kwargs["optimization"] = "minimize"
         min_result = opt_moment_preserving_ent(**run_kwargs)
         ent_min[idx, jdx] = min_result.metric_final

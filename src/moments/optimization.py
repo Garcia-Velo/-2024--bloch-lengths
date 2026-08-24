@@ -281,13 +281,11 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         Mapping from subsystem subsets to indices in tensor_basis.
     Rt : Dict[Tuple[int, ...], float]
         Target Bloch vector norms for each subsystem subset.
-    x0_warm: np.ndarray | None, defalt=None
-        Guess of an initial state
-    metric : str, default="concurrence"
+    metric : str, default="negativity"
         The entanglement metric to optimize ('concurrence' or 'eof').
     optimization : str, default="minimize"
         Whether to 'minimize' or 'maximize' the metric.
-    cholesky_opt : bool, default=False
+    cholesky_opt : bool, default=True
         If True, use Cholesky parametrization for optimization.
     exact_jac : bool, default=False
         If True, compute the exact Jacobian for the trace norm metric.
@@ -295,6 +293,8 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         Tolerance for purity checks.
     psd_tol : float, default=1e-10
         Tolerance for positive semidefinite checks.
+    jac_tol : float, default=1e-10
+            Tolerance for Jacobian calculations.
     local_maxiter : int, default=500
         Maximum iterations for the local optimizer.
     
@@ -315,7 +315,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     d = int(np.prod(dim))
     
     if N <= 1:
-        raise ValueError(f"The number of subsystems must be greater or equal than 2.")
+        raise ValueError(f"The number of subsystems must be greater or equal than 1.")
     elif N > 2:
         raise NotImplementedError("Optimization is only implemented for bipartite systems.")
     
