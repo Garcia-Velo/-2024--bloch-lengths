@@ -311,9 +311,9 @@ def plot_results(ent_max: np.ndarray, ent_min: np.ndarray, grid: dict[str, Any],
     for i in range(3):
         ax[i].set(xlabel = r"$\sqrt{2} || r_1 || = \sqrt{2} || r_2 ||$", ylabel = r"$||r_{1, 2}||$", xlim = (0, 2.1), ylim = (0, 3.1),
                     xticks=np.arange(0, 2.1, 0.5), yticks=np.arange(0, 3.1, 0.5))
-        ax[i].plot(t, z_upper, 'red', linewidth=2)
-        ax[i].plot(t, z_ent, 'orange', linewidth=2)
-        ax[i].plot(t, z_lower, 'grey', linewidth=2)
+        ax[i].plot(t, z_upper, 'red', linewidth=2, label='Upper bound')
+        ax[i].plot(t, z_ent, 'orange', linewidth=2, label='Entangled')
+        ax[i].plot(t, z_lower, 'grey', linewidth=2, label='Separable')
         ax[i].grid(True)
         ax[i].text(-0.25, 1.05, labels[i], transform=ax[i].transAxes, va='top', ha='left')
 
@@ -347,7 +347,7 @@ if __name__ == "__main__":
     tensor_basis, subset_index_map = basis_definitions(dim)
 
     # Set the grid resolution.
-    D = 10
+    D = 200
     # Construct the discretized moment-space grid.
     grid = space_discretization(D)
 

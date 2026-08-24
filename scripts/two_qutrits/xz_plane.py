@@ -235,7 +235,7 @@ def main_optimization(run_kwargs: dict[str, Any], grid: dict[str, Any], data_dir
             ent_min[idx, jdx] = min_result.metric_final
 
         # Save the current maximum and minimum arrays as an intermediate file.
-        np.savez(data_dir / "sym_ent.npz",
+        np.savez(data_dir / "xz_ent.npz",
                  max=ent_max, min=ent_min)
         
         tf = time.time()
@@ -307,7 +307,7 @@ def plot_results(ent_max: np.ndarray, ent_min: np.ndarray, grid: dict[str, Any],
     cbar1.set_ticks(list(np.linspace(0, 0.42, 6)))
 
     # Configure the siplay of each panel.
-    labels = ['(a)', '(b)', '(c)']
+    labels = ['(d)', '(e)', '(f)']
     for i in range(3):
         ax[i].set(xlabel = r"$|| r_1 || \quad (|| r_2 || = 0)$", ylabel = r"$||r_{1, 2}||$", xlim = (0, 2), ylim = (0, 3),
                   xticks=np.arange(0, 2.1, 0.5), yticks=np.arange(0, 3.1, 0.5))
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     main_optimization(run_kwargs, grid, data_dir)
 
     # Load the saved trace-norm optimization results.
-    ent = np.load(data_dir / "sym_ent.npz")
+    ent = np.load(data_dir / "xz_ent.npz")
     # Convert the trace-norm results into negativity values.
     neg_max = np.asarray(compute_negativity(trace_norm_pt=ent["max"]))
     neg_min = np.asarray(compute_negativity(trace_norm_pt=ent["min"]))
