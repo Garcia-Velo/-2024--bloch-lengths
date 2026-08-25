@@ -1,3 +1,8 @@
+#------------------------------
+# Importations
+#------------------------------
+
+# Auxiliary python functions
 from pathlib import Path
 
 def find_project_root() -> Path:

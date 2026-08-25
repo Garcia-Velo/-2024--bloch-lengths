@@ -189,7 +189,7 @@ def compute_bipartite_region_ent(d: int, a: float | np.ndarray, b: float | np.nd
         If any of a or b are negative.
         If result is negative (non-physical region detected).
     """
-
+    # Compute square of the Bloch lengths
     a2 = np.asarray(a, dtype=float)**2
     b2 = np.asarray(b, dtype=float)**2
 
@@ -244,7 +244,7 @@ def compute_bipartite_region_lower(dim: list[int], a: float | np.ndarray, b: flo
         If any of a or b are negative.
         If computed ||t|| is negative (outside physical region).
     """
-
+    # Uniform treatment as numpy arrays
     a = np.asarray(a, dtype=float)
     b = np.asarray(b, dtype=float)
 

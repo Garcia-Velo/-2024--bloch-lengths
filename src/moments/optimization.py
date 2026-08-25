@@ -102,13 +102,16 @@ def choose_metric(dim: list[int], metric: str) -> tuple[Callable, Callable, None
     ValueError
         If the metric is not supported.
     """
+    # Concurrence-based metrics are only supported for two qubits.
     is_two_qubit = (len(dim) == 2 and dim[0] == dim[1] == 2)
 
     # --- Concurrence / EOF ---
     if metric == "concurrence":
+        # Reject unsupported dimensions before creating metric callbacks.
         if not is_two_qubit:
             raise NotImplementedError("Concurrence optimization is only implemented for 2-qubit systems.")
         def compute_metric_report(inputs: MetricInputs) -> float:
+            # Evaluate concurrence from the density matrix.
             if inputs.A is not None:
                 return compute_concurrence(inputs.A)
             else:
@@ -116,14 +119,17 @@ def choose_metric(dim: list[int], metric: str) -> tuple[Callable, Callable, None
         return compute_metric_report, compute_metric_report, None
 
     elif metric == "entanglement_of_formation":
+        # Entanglement of formation is implemented here for two qubits only.
         if not is_two_qubit:
             raise NotImplementedError("Entanglement of formation optimization is only implemented for 2-qubit systems.")
         def compute_metric_report(inputs: MetricInputs) -> float:
+            # Compute the final metric value for reporting.
             if inputs.A is not None:
                 return float(compute_eof(rho=inputs.A))
             else:
                 raise ValueError("Must provide A.")
         def compute_metric_opt(inputs: MetricInputs) -> float:
+            # Optimize concurrence because it is monotonic with this metric.
             if inputs.A is not None:
                 return compute_concurrence(inputs.A)
             else:
@@ -133,28 +139,33 @@ def choose_metric(dim: list[int], metric: str) -> tuple[Callable, Callable, None
      # --- Trace norm / Negativity ---
     elif metric == "partial_trace_norm":
         def compute_metric_report(inputs: MetricInputs) -> float:
+            # Use precomputed eigenvalues when available to avoid repeated work.
             if inputs.eigenvalues is not None:
                 return compute_pt_norm(inputs.dim, eigenvalues=inputs.eigenvalues)
             return compute_pt_norm(inputs.dim, A=inputs.A)
         def compute_metric_jac(inputs: MetricInputs) -> np.ndarray:
+            # Compute the corresponding analytical Jacobian.
             if inputs.eigenvalues is not None:
                 return compute_pt_norm_jac(inputs.dim, eigenvalues=inputs.eigenvalues, eigenvectors=inputs.eigenvectors)
             return compute_pt_norm_jac(inputs.dim, A=inputs.A)
         return compute_metric_report, compute_metric_report, compute_metric_jac
     elif metric == "negativity":
         def compute_metric_report(inputs: MetricInputs) -> float:
+            # Convert the partial-transpose trace norm into negativity.
             if inputs.eigenvalues is not None:
                 A_pt = compute_tr_norm(eigenvalues=inputs.eigenvalues)
                 return float(compute_negativity(trace_norm_pt=A_pt))
             return float(compute_negativity(rho=inputs.A, dim=inputs.dim))
     
         def compute_metric_opt(inputs: MetricInputs) -> float:
+            # Optimize the proportional partial-transpose norm.
             if inputs.eigenvalues is not None:
                 return compute_pt_norm(inputs.dim, eigenvalues=inputs.eigenvalues)
             return compute_pt_norm(inputs.dim, A=inputs.A)
     
         def compute_metric_jac(inputs: MetricInputs) -> np.ndarray:
-            # d(negativity)/dx = 0.5 * d(trace_norm)/dx -- scale factor lives here, once.
+            # Scale factor lives here, once.
+            # Build the Jacobian of the partial-transpose norm.
             if inputs.eigenvalues is not None:
                 G = compute_pt_norm_jac(inputs.dim, eigenvalues=inputs.eigenvalues, eigenvectors=inputs.eigenvectors)
             else:
@@ -190,10 +201,13 @@ def trivial_result(dim, tensor_basis: np.ndarray, subset_index_map: dict[tuple[i
     OptimizationResult
         The result object with initial and final states set to the same.
     """
+    # Select the reporting function.
     compute_metric_report, _, _ = choose_metric(dim, metric)
     
+    # Compute the Bloch vectors and their norms for the unchanged state.
     r0 = compute_bloch_vector(tensor_basis, subset_index_map, rho)
     R0 = compute_bloch_norms_from_vector(r0)
+    # Evaluate the metric once because initial and final states are identical.
     metric_value = compute_metric_report(MetricInputs(dim=dim, A=rho))
 
     
@@ -242,17 +256,21 @@ def compute_chain_rule_grad(d: int, grad_rho: np.ndarray, data: dict, cholesky_o
         np.ndarray
             Real gradient vector of f w.r.t. x, same length as x.
         """
+        # Retrieve the cached parametrization and normalized density matrix.
         X, rho, tau = data["X"], data["rho"], data["tau"]
 
+        # Remove the trace-direction component before mapping the gradient to X.
         scalar = np.real(np.trace(grad_rho @ rho))
         grad_X = (2.0 / tau) * (grad_rho - scalar * np.eye(d, dtype=complex)) @ X
 
         if cholesky_opt:
+            # Keep only independent lower-triangular Cholesky entries.
             lower_idx = np.tril_indices(d)
             grad_vals = grad_X[lower_idx]
         else:
             grad_vals = grad_X.ravel()
 
+        # Interleave real and imaginary parts for scipy's real parameter vector.
         grad = np.empty(2 * len(grad_vals), dtype=float)
         grad[0::2] = np.real(grad_vals)
         grad[1::2] = np.imag(grad_vals)
@@ -282,7 +300,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     Rt : Dict[Tuple[int, ...], float]
         Target Bloch vector norms for each subsystem subset.
     metric : str, default="negativity"
-        The entanglement metric to optimize ('concurrence' or 'eof').
+        The entanglement metric to optimize.
     optimization : str, default="minimize"
         Whether to 'minimize' or 'maximize' the metric.
     cholesky_opt : bool, default=True
@@ -311,6 +329,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         If initial state computation fails.
     """
     # --- 0. Resolve dimensions ---
+    # Derive the subsystem count and total Hilbert-space dimension.
     N = len(dim)
     d = int(np.prod(dim))
     
@@ -319,17 +338,21 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     elif N > 2:
         raise NotImplementedError("Optimization is only implemented for bipartite systems.")
     
+    # Resolve all metric callbacks before constructing the optimizer.
     compute_metric_report, compute_metric_opt, compute_metric_jac = choose_metric(dim, metric)
     
     # --- 1. Find valid initial state ---
+    # Retry initialization until a valid starting state is produced.
     param_res: ParameterResult | None = None
     while param_res is None or not param_res.optimizer_info["success"]:
         param_res = compute_initial_param_repeat(d, tensor_basis, subset_index_map, Rt)
     
+    # Unpack the starting parameters, state, Bloch vectors, and moments.
     x0, rho0, r0, R0 = param_res.param, param_res.rho, param_res.bloch, param_res.moments
     metric0 = compute_metric_report(MetricInputs(dim=dim, A=rho0))
 
     # --- 2. Check trivial cases ---
+    # Use total squared moment length to detect trivial boundary cases.
     SR = sum([Rt[subset]**2 for subset in subset_index_map.keys()])
     
     if SR >= d - 1 - purity_tol:
@@ -346,10 +369,12 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     
     # --- 3. Convert to Cholesky parametrization ---
     if cholesky_opt:
+        # Factor the initial state so trial states stay positive semidefinite.
         L = compute_cholesky(rho0, lower=True)
         x0 = compute_param_from_X(L, cholesky_opt)
 
     # --- 4. Shared cache for efficiency ---
+    # Reuse expensive state calculations across optimizer callbacks.
     cache: dict = {}
 
     def compute_shared(x: np.ndarray) -> dict:
@@ -390,6 +415,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
                 ||rho^Gamma||_1 = sum(|eigvals|).
         """
         if "x" not in cache or not np.array_equal(x, cache["x"]):
+            # Rebuild cached quantities only when the parameter vector changes.
             X = compute_X_from_param(x, cholesky_opt)
             rho = compute_dm_from_X(X)
             r = compute_bloch_vector(tensor_basis, subset_index_map, rho)
@@ -407,6 +433,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
                 "jac_metric": None,
             })
             if exact_jac:
+                # Cache partial-transpose eigendata for exact metric derivatives.
                 rho_pt = compute_pt(dim, rho)
                 eigvals, eigvecs = eigh(rho_pt)
                 metric_inputs = MetricInputs(dim=dim, eigenvalues=eigvals, eigenvectors=eigvecs)
@@ -419,7 +446,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         
         return cache
     
-    # --- 6. Objective function ---
+    # --- 5. Objective function ---
     def compute_objective(optimization: str):
         """
         Build the objective function for optimization.
@@ -435,21 +462,26 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         Callable
             Objective function. Returns the negative of the metric when maximizing, or the metric directly when minimizing.
         """
+        # Negate the metric for maximization because scipy minimizes objectives.
         sign = -1.0 if optimization == "maximize" else 1.0
 
+        # Reject unsupported optimization directions before creating the callback.
         if optimization not in {"maximize", "minimize"}:
             raise ValueError(f"Input 'optimization' must be 'maximize' or 'minimize', got '{optimization}'.")
         
+        # Use cached metric data when the analytical Jacobian is enabled.
         if exact_jac:
             def objective(x: np.ndarray) -> float:
                 return sign * compute_shared(x)["metric"]
         else:
             def objective(x: np.ndarray) -> float:
+                # Reconstruct the density matrix and evaluate the metric directly.
                 rho = compute_shared(x)["rho"]
                 return sign * compute_metric_opt(MetricInputs(dim=dim, A=rho))
         
         return objective
     
+    # Build the objective callback with the requested optimization direction.
     objective = compute_objective(optimization)
     
     # --- 7. Constraint Jacobian ---
@@ -468,24 +500,32 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         np.ndarray
             Jacobian matrix of shape (n_subsets, len(x)).
         """
+        # Reuse all state quantities computed for this parameter vector.
         data = compute_shared(x)
 
+        # Return the cached Jacobian when another constraint requests it.
         if data["jac_constraints"] is not None:
             return data["jac_constraints"]
         
+        # Read the Bloch vectors and prepare one gradient row per constraint.
         r = data["r"]
         rows = []
 
+        # Different subsystem subsets define separate moment-norm constraints.
         for subset, indices in subset_index_map.items():
             r_M = r[subset]
             norm = np.linalg.norm(r_M)
 
+            # Normalize the vector to obtain the derivative of its norm.
             if norm > jac_tol:
                 direction = r_M / norm
+                # Contract the direction with the operator basis to get dR/drho.
                 grad_rho = np.tensordot(direction, tensor_basis[indices], axes=1)
             else:
+                # Use a zero derivative at a numerically vanishing norm.
                 grad_rho = np.zeros((d, d), dtype=complex)
 
+            # Convert the matrix gradient into the optimizer's real parameters.
             rows.append(compute_chain_rule_grad(d, grad_rho, data, cholesky_opt))
 
         data["jac_constraints"] = np.vstack(rows)
@@ -508,11 +548,14 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         np.ndarray
             Gradient vector of the objective w.r.t. x, same length as x.
         """
+        # Reuse the state and partial-transpose data for this parameter vector.
         data = compute_shared(x)
 
+        # Avoid recomputing the metric gradient during the same optimizer step.
         if data["jac_metric"] is not None:
             return data["jac_metric"]
         
+        # Apply the same sign convention as the objective callback.
         sign = -1.0 if optimization == "maximize" else 1.0
         grad = sign * compute_chain_rule_grad(d, data["S_pt"], data, cholesky_opt)
 
@@ -521,17 +564,20 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         return grad
 
     # --- 9. Constraints ---
+    # Create a callback that measures deviation from one target moment.
     def _make_constraint_fun(subset):
         target = Rt[subset]
         def fun(x):
             return compute_shared(x)["R"][subset] - target
         return fun
     
+    # Create a callback that selects one row of the constraint Jacobian.
     def _make_constraint_jac(i):
         def jac(x):
             return compute_jac_constraints(x)[i]
         return jac
     
+    # Build scipy's list of equality constraints in subset order.
     constraints = [
         {
             "type": "eq",
@@ -542,29 +588,37 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
     ]
     
     # --- 10. Run optimization ---
+    # Configure SLSQP with the equality constraints and convergence settings.
     minimize_kwargs = {
         "method": "SLSQP",
         "constraints": constraints,
         "options": {"maxiter": local_maxiter, "ftol": 1e-12, "disp": False},
     }
+    # Exact derivatives are available only for metrics with a Jacobian adapter.
     if exact_jac and compute_metric_jac is None:
         raise NotImplementedError(f"Exact Jacobian is not implemented for metric '{metric}'. Use exact_jac=False instead.")
+    # Pass the analytical objective Jacobian when requested.
     if exact_jac:
         minimize_kwargs["jac"] = compute_jac_metric
+    # Execute the constrained local optimization from the initialized parameters.
     result = minimize(objective, x0, **minimize_kwargs)
 
-    # --- 10. Extract final state ---
+    # --- 11. Extract final state ---
+    # Compute and cache all representations at the optimizer's final parameters.
     cache_result = compute_shared(result.x)
     rho_opt, r_opt, R_opt = cache_result["rho"], cache_result["r"], cache_result["R"]
     metric_opt = compute_metric_report(MetricInputs(dim=dim, A=rho_opt))
 
-    # --- 11. Run checks on the solution ---
+    # --- 12. Run checks on the solution ---
+    # Measure the absolute error for every preserved moment norm.
     moments_distance = {subset: float(abs(R_opt[subset] - Rt[subset])) for subset in subset_index_map}
     moments_equal = np.allclose(np.array(list(R0.values())), np.array(list(R_opt.values())))
     
+    # Verify that the optimized matrix is still a valid density matrix.
     is_valid_dm, is_valid_dm_info = compute_is_valid_dm(rho_opt, psd_tol)
     
-    # --- 12. Final output ---
+    # --- 13. Final output ---
+    # Collect numerical checks for callers and downstream reporting.
     checks = {
         "moments_distance": moments_distance,
         "moments_equal": moments_equal,
@@ -572,6 +626,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         "is_valid_dm_info": is_valid_dm_info,
     }
 
+    # Record the optimizer configuration and scipy's termination statistics.
     optimizer_info = {
         "mode": "moment_preserving_bloch",
         "metric_optimized": metric,
@@ -583,6 +638,7 @@ def opt_moment_preserving_ent(dim: list[int], tensor_basis: np.ndarray, subset_i
         "nfev": int(result.nfev),
     }
 
+    # Return the initial and optimized states together with all diagnostics.
     return OptimizationResult(
         rho_initial=rho0,
         rho_final=rho_opt,

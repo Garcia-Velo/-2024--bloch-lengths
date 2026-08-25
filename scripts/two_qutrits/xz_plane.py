@@ -332,8 +332,8 @@ if __name__ == "__main__":
 
     # Define paths for relevant directories.
     PROJECT_ROOT = find_project_root()
-    data_dir = PROJECT_ROOT / "data" / "raw" / "two_qutrits"
-    plots_dir = PROJECT_ROOT / "plots" / "raw" / "two_qutrits"
+    data_dir = PROJECT_ROOT / "data" / "scripts" / "two_qutrits"
+    plots_dir = PROJECT_ROOT / "plots" / "scripts" / "two_qutrits"
     # Create directories if they don't exist.
     data_dir.mkdir(parents=True, exist_ok=True)
     plots_dir.mkdir(parents=True, exist_ok=True)

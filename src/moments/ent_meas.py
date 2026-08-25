@@ -169,18 +169,18 @@ def compute_pt(dim: Sequence[int], A: np.ndarray, subsystem: int | Iterable[int]
     ndarray
         Partial transpose.
     """
+    # Define system properties.
     dim = tuple(dim)
     N = len(dim)
     d = int(np.prod(dim))
 
+    # Security checks
     if A.shape != (d, d):
         raise ValueError("A must have shape (prod(dim), prod(dim)).")
-
     if isinstance(subsystem, int):
         subsystem = (subsystem,)
     else:
         subsystem = tuple(subsystem)
-
     if any(s < 0 or s >= N for s in subsystem):
         raise ValueError("Invalid subsystem index.")
 
@@ -219,6 +219,7 @@ def compute_pt_norm(dim: list[int], eigenvalues: np.ndarray | None = None, A: np
     ValueError
         If 'rho' is not a square matrix or if 'dim' is inconsistent with the shape of 'rho'.
     """
+    # Treat different inputs in different ways.
     if eigenvalues is not None:
         return compute_tr_norm(eigenvalues=eigenvalues)
     elif A is None:
@@ -227,7 +228,6 @@ def compute_pt_norm(dim: list[int], eigenvalues: np.ndarray | None = None, A: np
         d = A.shape[0]
         if dim[0] * dim[1] != d:
             raise ValueError(f"dim={dim} inconsistent with A shape ({d}, {d}).")
-        
         A_pt = compute_pt(dim=dim, A=A, subsystem=subsystem)
         return compute_tr_norm(A=A_pt)
 
@@ -254,6 +254,7 @@ def compute_pt_norm_jac(dim: list[int], eigenvalues: np.ndarray | None = None, e
     np.ndarray
         The Jacobian of the trace norm of the partial transpose with respect to A.
     """
+    # Treat different inputs in different ways.
     if eigenvalues is not None and eigenvectors is not None:
         eigvals = eigenvalues.copy()
         eigvecs = eigenvectors.copy()
@@ -297,12 +298,11 @@ def compute_negativity(
     ValueError
         If neither rho nor trace_norm_pt is provided, or if dim is inconsistent with the shape of rho.
     """
+    # Treat different inputs in different ways.
     if trace_norm_pt is not None:
         return (trace_norm_pt - 1.0) / 2.0
-
     if rho is None:
         raise ValueError("Must provide either rho or trace_norm_pt.")
-
     n = rho.shape[0]
     if dim is None:
         dA = dB = int(np.sqrt(n))
@@ -314,6 +314,5 @@ def compute_negativity(
         dim = [dA, dB]
     elif np.prod(dim) != n:
         raise ValueError(f"dim={dim} inconsistent with rho shape.")
-
     rho_pt = compute_pt(dim, rho, subsystem)
     return (compute_tr_norm(A=rho_pt) - 1.0) / 2.0
