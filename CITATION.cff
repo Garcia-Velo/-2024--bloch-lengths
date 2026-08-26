@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+title: "Bloch lengths entanglement optimization"
+
+message: "If you use this software, please cite the associated publication and the specific software release."
+
+authors:
+
+* family-names: "García Velo"
+  given-names: "Alfonso"
+* family-names: "Paraschiv"
+  given-names: "Marius"
+* family-names: "Ban"
+  given-names: "Yue"
+* family-names: "Torrontegui"
+  given-names: "Erik"
+* family-names: "Puebla"
+  given-names: "Ricardo"
+
+version: "0.1.0"
+date-released: "..."
+
+doi: "..."
+license: "BSD-3-Clause"
+
+references:
+
+* type: article
+
+  authors:
+
+  * family-names: "García Velo"
+    given-names: "Alfonso"
+  * family-names: "Paraschiv"
+    given-names: "Marius"
+  * family-names: "Ban"
+    given-names: "Yue"
+  * family-names: "Torrontegui"
+    given-names: "Erik"
+  * family-names: "Puebla"
+    given-names: "Ricardo"
+  
+  title: "Limitations of the marginal Bloch lengths in entanglement detection"
+  doi: "..."
