@@ -24,7 +24,7 @@ license: "BSD-3-Clause"
 
 references:
 
-* type: article
+type: article
 
   authors:
 
@@ -39,5 +39,5 @@ references:
   * family-names: "Puebla"
     given-names: "Ricardo"
   
-  title: "Limitations of the marginal Bloch lengths in entanglement detection"
-  doi: "..."
+title: "Limitations of the marginal Bloch lengths in entanglement detection"
+doi: "..."

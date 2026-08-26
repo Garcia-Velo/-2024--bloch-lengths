@@ -1,4 +1,4 @@
-# Limitations of the marginal Bloch lengths in entanglement detection
+# Bloch lengths entanglement optimization
 
 Code repository for the paper:
 
@@ -15,7 +15,6 @@ The two-qubit case is treated with the closed-form characterization of the valid
 > **To do**
 > - Add arXiv/DOI link once available (see [Citation](#citation)).
 > - Update link and instructions to clone repository when final version is abailable and has a DOI.
-> - Create `CITATION.cff`.
 > - Create a release tag.
 
 ## Repository structure
@@ -121,12 +120,24 @@ jupyter lab tests/bloch.ipynb
 
 ## Citation
 
-If you use this code, please cite the associated paper:
+If you use this software in your research, please cite both the associated publication and the specific version of the software used.
 
-> TODO: add full citation (authors, title, journal/arXiv, year) once available.
+### Associated publication
 
-This work builds on the characterization of valid Bloch lengths introduced in:
-> Phys. Rev. A 109, 012423 (2024).
+A. García Velo, M. Paraschiv, Y. Ban, E. Torrontegui, and R. Puebla,
+**"Limitations of the marginal Bloch lengths in entanglement detection"**,
+*Journal Name*, volume, article/page (2026).
+DOI: ...
+
+### Software
+
+The version of the software used to produce the results in the publication is archived on Zenodo:
+
+**Version 0.1.0**
+DOI: 10.5281/zenodo.12345678
+
+Please cite the specific software version used in your research. Later versions may contain changes that are not present in the version associated with the publication.
+
 
 ## License
 
