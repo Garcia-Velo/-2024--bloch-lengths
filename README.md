@@ -1,5 +1,10 @@
 # Bloch Lengths
 
+> **To do**
+> - Add paper reference
+> - Update link and instructions to clone repository when final version is abailable and has a DOI.
+> - Add license.
+
 Numerical code for the study of entanglement bounds in multipartite quantum systems, parametrized by **Bloch lengths** (norms of the reduced Bloch vectors of a density matrix). Given a target set of Bloch lengths, the code numerically optimizes over the compatible density matrices to find the states of extremal entanglement, and maps the resulting bounds across the physically valid region of Bloch-length space.
 
 The two-qubit case is treated with the closed-form characterization of the valid Bloch-length region from Phys. Rev. A 109, 012423 (2024); the two-qutrit case uses a numerically-determined polytope, since the analytic inequalities are no longer tight in that setting.
@@ -33,7 +38,7 @@ The two-qubit case is treated with the closed-form characterization of the valid
 
 ## Installation
 
-Requires **Python ≥ 3.10** (the codebase uses `X | Y` union-type hints).
+Requires **Python ≥ 3.10**.
 
 ```bash
 git clone https://github.com/Garcia-Velo/-2024--bloch-lengths.git
@@ -43,16 +48,14 @@ git checkout publication-2026
 python3 -m venv .venv
 source .venv/bin/activate        # on macOS/Linux
 
-pip install -e .
+pip install -r requirements.txt
 ```
 
-This installs the `moments` package defined in `src/` in editable mode, together with its dependencies (NumPy, SciPy). To run the notebooks in `examples/` and `tests/`, also install Matplotlib and Jupyter:
+This installs the `moments` package defined in `src/` in editable mode, together with its dependencies (NumPy, SciPy, Matplotlib, ...). To run the notebooks in `examples/` and `tests/`, also install Jupyter:
 
 ```bash
-pip install matplotlib jupyterlab
+pip install jupyterlab
 ```
-
-> **Note:** `pyproject.toml` currently declares `dependencies = []`. Before publishing, list the actual runtime dependencies there (at minimum `numpy` and `scipy`) so that `pip install -e .` pulls them in automatically. The included `requirements.txt` is a full environment freeze (includes JupyterLab internals, etc.) rather than a minimal dependency list — consider trimming it to the packages the code actually imports, or keeping both: a minimal `pyproject.toml` dependency list plus this freeze for exact reproducibility.
 
 ## Usage
 
