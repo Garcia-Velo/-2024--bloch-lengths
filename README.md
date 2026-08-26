@@ -130,4 +130,8 @@ This work builds on the characterization of valid Bloch lengths introduced in:
 
 ## License
 
-> TODO: add a license (e.g. MIT or BSD-3-Clause are common choices for academic code) before publishing the repository. Until then, all rights are reserved by the authors.
+This software is released under the **BSD 3-Clause License**.
+
+Copyright (c) 2026 Alfonso García Velo, Marius Paraschiv, Yue Ban, Erik Torrontegui, Ricardo Puebla.
+
+See the [`LICENSE`](LICENSE) file for the full license text.
