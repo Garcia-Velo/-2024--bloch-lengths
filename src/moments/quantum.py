@@ -5,41 +5,6 @@
 # Numerical and scientific python programming
 import numpy as np
 
-# Auxiliary python functions
-from functools import reduce
-from typing import Sequence
-
-# ----------------------------------------
-# Basic algebra
-# ----------------------------------------
-
-def compute_adj(A: np.ndarray) -> np.ndarray:
-    """
-    Compute the adjoint (Hermitian conjugate) of a matrix.
-
-    Parameters
-    ----------
-    A : np.ndarray
-        Input matrix or vector.
-
-    Returns
-    -------
-    np.ndarray
-        The adjoint of ``A`` with the same shape transposed.
-
-    Raises
-    ------
-    ValueError
-        If ``A`` is not a NumPy array or is empty.
-    """
-    # Perform input validations.
-    if not isinstance(A, np.ndarray):
-        raise ValueError("A must be a numpy array.")
-    if A.size == 0:
-        raise ValueError("A must not be an empty array.")
-    # Compute the adjoint.
-    return np.conj(A).T
-
 # ----------------------------------------
 # State preparation and validation
 # ----------------------------------------
