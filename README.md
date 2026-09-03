@@ -6,14 +6,13 @@ Code repository for the paper:
 
 - Authors: A. García-Velo, M. Paraschiv, Y. Ban, E. Torrontegui and R. Puebla.
 
-- DOI: arXiv/DOI link once available
+- DOI: https://arxiv.org/abs/2506.12406
 
 Numerical code for the study of entanglement bounds in multipartite quantum systems, parametrized by **Bloch lengths** (norms of the reduced Bloch vectors of a density matrix). Given a target set of Bloch lengths, the code numerically optimizes over the compatible density matrices to find the states of extremal entanglement, and maps the resulting bounds across the physically valid region of Bloch-length space.
 
 The two-qubit case is treated with the closed-form characterization of the valid Bloch-length region from Phys. Rev. A 109, 012423 (2024); the two-qutrit case uses a numerically-determined polytope, since the analytic inequalities are no longer tight in that setting.
 
 > **To do**
-> - Add arXiv/DOI link once available (see [Citation](#citation)).
 > - Update link and instructions to clone repository when final version is abailable and has a DOI.
 > - Create a release tag.
 
@@ -65,7 +64,7 @@ pip install jupyterlab
 
 ## Usage
 
-### Reproducing the paper figures
+### Reproducing the paper figuresv
 
 The curated data behind the published figures already lives in `data/paper`. To regenerate the figures from it:
 
