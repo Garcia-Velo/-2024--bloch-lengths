@@ -12,10 +12,6 @@ Numerical code for the study of entanglement bounds in multipartite quantum syst
 
 The two-qubit case is treated with the closed-form characterization of the valid Bloch-length region from Phys. Rev. A 109, 012423 (2024); the two-qutrit case uses a numerically-determined polytope, since the analytic inequalities are no longer tight in that setting.
 
-> **To do**
-> - Update link and instructions to clone repository when final version is abailable and has a DOI.
-> - Create a release tag.
-
 ## Repository structure
 
 ```
@@ -132,8 +128,8 @@ DOI: ...
 
 The version of the software used to produce the results in the publication is archived on Zenodo:
 
-**Version 0.1.0**
-DOI: 10.5281/zenodo.12345678
+**Version 1.0.0**
+DOI: 
 
 Please cite the specific software version used in your research. Later versions may contain changes that are not present in the version associated with the publication.
 
