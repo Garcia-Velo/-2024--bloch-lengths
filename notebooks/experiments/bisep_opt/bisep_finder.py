@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.optimize import minimize, differential_evolution
-from scipy.linalg import sqrtm
 import warnings
 warnings.filterwarnings('ignore')
 
