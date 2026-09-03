@@ -1,43 +1,41 @@
 cff-version: 1.2.0
+
 title: "Bloch lengths entanglement optimization"
 
 message: "If you use this software, please cite the associated publication and the specific software release."
 
+type: software
+
 authors:
+  - family-names: "García Velo"
+    given-names: "Alfonso"
+  - family-names: "Paraschiv"
+    given-names: "Marius"
+  - family-names: "Ban"
+    given-names: "Yue"
+  - family-names: "Torrontegui"
+    given-names: "Erik"
+  - family-names: "Puebla"
+    given-names: "Ricardo"
 
-* family-names: "García Velo"
-  given-names: "Alfonso"
-* family-names: "Paraschiv"
-  given-names: "Marius"
-* family-names: "Ban"
-  given-names: "Yue"
-* family-names: "Torrontegui"
-  given-names: "Erik"
-* family-names: "Puebla"
-  given-names: "Ricardo"
+version: "1.0.0"
 
-version: "0.1.0"
-date-released: "..."
+date-released: "2026-08-26"
 
-doi: "..."
 license: "BSD-3-Clause"
 
 references:
-
-type: article
-
-  authors:
-
-  * family-names: "García Velo"
-    given-names: "Alfonso"
-  * family-names: "Paraschiv"
-    given-names: "Marius"
-  * family-names: "Ban"
-    given-names: "Yue"
-  * family-names: "Torrontegui"
-    given-names: "Erik"
-  * family-names: "Puebla"
-    given-names: "Ricardo"
-  
-title: "Limitations of the marginal Bloch lengths in entanglement detection"
-doi: https://arxiv.org/abs/2506.12406
+  - type: article
+    authors:
+      - family-names: "García Velo"
+        given-names: "Alfonso"
+      - family-names: "Paraschiv"
+        given-names: "Marius"
+      - family-names: "Ban"
+        given-names: "Yue"
+      - family-names: "Torrontegui"
+        given-names: "Erik"
+      - family-names: "Puebla"
+        given-names: "Ricardo"
+    title: "Limitations of the marginal Bloch lengths in entanglement detection"
+    url: "https://arxiv.org/abs/2506.12406"
